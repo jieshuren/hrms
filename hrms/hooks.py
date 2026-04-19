@@ -277,14 +277,6 @@ before_tests = "hrms.tests.test_utils.before_tests"
 # get matching queries for Bank Reconciliation
 get_matching_queries = "hrms.hr.utils.get_matching_queries"
 
-regional_overrides = {
-	"India": {
-		"hrms.hr.utils.calculate_annual_eligible_hra_exemption": "hrms.regional.india.utils.calculate_annual_eligible_hra_exemption",
-		"hrms.hr.utils.calculate_hra_exemption_for_period": "hrms.regional.india.utils.calculate_hra_exemption_for_period",
-		"hrms.hr.utils.calculate_tax_with_marginal_relief": "hrms.regional.india.utils.calculate_tax_with_marginal_relief",
-	},
-}
-
 # ERPNext doctypes for Global Search
 global_search_doctypes = {
 	"Default": [
