@@ -54,7 +54,7 @@
    "fieldname": "holiday_list",
    "fieldtype": "Link",
    "label": "节假日列表",
-   "options": "节假日列表"
+   "options": "Holiday List"
   },
   {
    "fieldname": "column_break_3",
@@ -206,7 +206,7 @@
    "fieldtype": "Link",
    "label": "加班类型",
    "mandatory_depends_on": "eval:doc.allow_overtime == 1",
-   "options": "加班类型"
+   "options": "Overtime Type"
   }
  ],
  "links": [],

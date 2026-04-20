@@ -43,7 +43,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "班次类型",
-   "options": "班次类型",
+   "options": "Shift Type",
    "reqd": 1
   },
   {

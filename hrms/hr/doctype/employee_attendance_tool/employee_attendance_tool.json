@@ -42,7 +42,7 @@
    "fieldname": "department",
    "fieldtype": "Link",
    "label": "部门",
-   "options": "部门"
+   "options": "Department"
   },
   {
    "fieldname": "branch",
@@ -54,7 +54,7 @@
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "公司",
-   "options": "公司"
+   "options": "Company"
   },
   {
    "collapsible": 1,
@@ -104,7 +104,7 @@
    "fieldtype": "Link",
    "label": "班次",
    "mandatory_depends_on": "filter_by_shift",
-   "options": "班次类型"
+   "options": "Shift Type"
   },
   {
    "fieldname": "employment_type",

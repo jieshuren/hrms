@@ -25,7 +25,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "班次类型",
-   "options": "班次类型",
+   "options": "Shift Type",
    "reqd": 1
   },
   {
@@ -33,7 +33,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "员工",
-   "options": "员工",
+   "options": "Employee",
    "reqd": 1
   },
   {
@@ -48,7 +48,7 @@
    "fieldname": "department",
    "fieldtype": "Link",
    "label": "部门",
-   "options": "部门",
+   "options": "Department",
    "read_only": 1
   },
   {
@@ -60,7 +60,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "公司",
-   "options": "公司",
+   "options": "Company",
    "reqd": 1
   },
   {
@@ -79,7 +79,7 @@
    "fieldtype": "Link",
    "label": "修订自",
    "no_copy": 1,
-   "options": "班次申请",
+   "options": "Shift Request",
    "print_hide": 1,
    "read_only": 1
   },
