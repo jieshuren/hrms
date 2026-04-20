@@ -21,30 +21,6 @@
   {
    "child": 0,
    "collapsible": 1,
-   "icon": "badge-alert",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Exemption Declaration",
-   "link_to": "Employee Tax Exemption Declaration",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "liabilities",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Exemption Submission Proof",
-   "link_to": "Employee Tax Exemption Proof Submission",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
    "icon": "criticize",
    "indent": 0,
    "keep_closed": 0,
@@ -80,30 +56,6 @@
   {
    "child": 1,
    "collapsible": 1,
-   "icon": "",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Income Tax Computation",
-   "link_to": "Income Tax Computation",
-   "link_type": "Report",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Income Tax Deductions",
-   "link_to": "Income Tax Deductions",
-   "link_type": "Report",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
    "indent": 0,
    "keep_closed": 0,
    "label": "Accrued Earnings Report",
@@ -122,30 +74,6 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Section Break"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Income Tax Slab",
-   "link_to": "Income Tax Slab",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "Exemption Category",
-   "link_to": "Employee Tax Exemption Category",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
   }
  ],
  "modified": "2026-02-23 12:00:35.246366",
