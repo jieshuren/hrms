@@ -84,7 +84,7 @@
    "fieldname": "shift_status",
    "fieldtype": "Select",
    "label": "Shift Status",
-   "options": "激活\n停用"
+   "options": "Active\nInactive"
   },
   {
    "fieldname": "shift_schedule",

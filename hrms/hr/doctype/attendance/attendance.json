@@ -86,6 +86,7 @@
   },
   {
    "default": "Present",
+   "default": "Present",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_standard_filter": 1,
@@ -93,7 +94,7 @@
    "no_copy": 1,
    "oldfieldname": "status",
    "oldfieldtype": "Select",
-   "options": "\n出勤\n缺勤\n请假\n半天\n居家办公",
+   "options": "\nPresent\nAbsent\nOn Leave\nHalf Day\nWork From Home",
    "reqd": 1,
    "search_index": 1
   },
@@ -216,7 +217,7 @@
    "fieldtype": "Select",
    "label": "另一半状态",
    "no_copy": 1,
-   "options": "\n出勤\n缺勤"
+   "options": "\nPresent\nAbsent"
   },
   {
    "default": "0",

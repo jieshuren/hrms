@@ -99,7 +99,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Reason",
-   "options": "居家办公\nOn Duty",
+   "options": "Work From Home\nOn Duty",
    "reqd": 1
   },
   {

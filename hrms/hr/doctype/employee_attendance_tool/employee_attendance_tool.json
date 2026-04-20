@@ -73,7 +73,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "状态",
-   "options": "\n出勤\n缺勤\n半天\n居家办公"
+   "options": "\nPresent\nAbsent\nHalf Day\nWork From Home"
   },
   {
    "collapsible": 1,
@@ -139,7 +139,7 @@
    "fieldname": "half_day_status",
    "fieldtype": "Select",
    "label": "另一半状态",
-   "options": "出勤\n缺勤"
+   "options": "Present\nAbsent"
   },
   {
    "fieldname": "column_break_gmhs",

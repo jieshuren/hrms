@@ -107,7 +107,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "状态",
-   "options": "激活\n停用"
+   "options": "Active\nInactive"
   },
   {
    "fieldname": "employee_details_section",

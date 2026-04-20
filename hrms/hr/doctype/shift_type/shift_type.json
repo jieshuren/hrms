@@ -68,13 +68,13 @@
    "fieldname": "determine_check_in_and_check_out",
    "fieldtype": "Select",
    "label": "确定签到和签退方式",
-   "options": "同一班次内交替记录为签到和签退\n严格基于员工签到的日志类型"
+   "options": "Alternating entries as IN and OUT during the same shift\nStrictly based on Log Type in Employee Checkin"
   },
   {
    "fieldname": "working_hours_calculation_based_on",
    "fieldtype": "Select",
    "label": "工作时长计算依据",
-   "options": "首次签到和最后签退\n每次有效的签到和签退"
+   "options": "First Check-in and Last Check-out\nEvery Valid Check-in and Check-out"
   },
   {
    "description": "低于此工作时长标记为半天（设为零则禁用）",
@@ -180,7 +180,7 @@
    "fieldname": "color",
    "fieldtype": "Select",
    "label": "排班颜色",
-   "options": "蓝色\n青色\n紫红色\n绿色\n青柠色\n橙色\n粉色\n红色\n紫色\n黄色"
+   "options": "Blue\nCyan\nFuchsia\nGreen\nLime\nOrange\nPink\nRed\nViolet\nYellow"
   },
   {
    "default": "0",
