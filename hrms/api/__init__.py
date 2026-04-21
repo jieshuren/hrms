@@ -624,8 +624,6 @@ def get_expense_approval_details(employee: str) -> dict:
 		department_approvers=department_approvers,
 		is_mandatory=frappe.db.get_single_value("HR Settings", "expense_approver_mandatory_in_expense_claim"),
 	)
-
-
 # Employee Advance
 @frappe.whitelist()
 def get_employee_advance_balance() -> list[dict]:
