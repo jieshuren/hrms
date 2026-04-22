@@ -513,6 +513,7 @@ def get_expense_claims(
 		"`tabExpense Claim`.total_claimed_amount",
 		"`tabExpense Claim`.posting_date",
 		"`tabExpense Claim`.company",
+		"`tabExpense Claim`.docstatus",
 		"`tabExpense Claim`.creation",
 		"`tabExpense Claim Detail`.expense_type",
 		{"COUNT": "`tabExpense Claim Detail`.expense_type", "as": "total_expenses"},

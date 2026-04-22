@@ -122,6 +122,62 @@ def _get_unmarked_attendance_with_shift(unmarked_attendance, shift, date):
 
 
 @frappe.whitelist()
+def get_attendance_by_project(
+	project: str,
+	date: str | datetime.date,
+) -> list[dict]:
+	"""按项目+日期查询考勤记录（绕过 REST API 对自定义字段的过滤限制）"""
+	if not frappe.db.has_column("Attendance", "project"):
+		return []
+	return frappe.get_all(
+		"Attendance",
+		fields=["name", "employee", "employee_name", "status", "shift", "docstatus"],
+		filters={
+			"project": project,
+			"attendance_date": getdate(date),
+			"docstatus": ["!=", 2],
+		},
+		order_by="creation desc",
+		limit_page_length=500,
+	)
+
+
+@frappe.whitelist()
+def get_monthly_attendance_by_project(
+	project: str,
+	month: str,
+) -> list[dict]:
+	"""按项目+月份查询考勤记录（绕过 REST API 对自定义字段的过滤限制）"""
+	if not frappe.db.has_column("Attendance", "project"):
+		return []
+	from datetime import datetime
+	year, mo = map(int, month.split("-"))
+	start = datetime(year, mo, 1)
+	if mo == 12:
+		end = datetime(year + 1, 1, 1)
+	else:
+		end = datetime(year, mo + 1, 1)
+	# 减一天得到当月最后一天
+	from datetime import timedelta
+	end = end - timedelta(days=1)
+	from frappe.utils import getdate as _getdate
+	return frappe.get_all(
+		"Attendance",
+		fields=[
+			"name", "employee", "employee_name", "attendance_date",
+			"status", "in_time", "out_time", "working_hours",
+			"shift", "late_entry", "early_exit", "project",
+		],
+		filters={
+			"project": project,
+			"attendance_date": ["between", [_getdate(start), _getdate(end)]],
+		},
+		order_by="attendance_date asc",
+		limit_page_length=0,
+	)
+
+
+@frappe.whitelist()
 def mark_employee_attendance(
 	employee_list: list | str,
 	status: str,
@@ -131,6 +187,7 @@ def mark_employee_attendance(
 	late_entry: int | None = None,
 	early_exit: int | None = None,
 	shift: str | None = None,
+	project: str | None = None,
 	mark_half_day: bool | None = False,
 	half_day_status: str | None = None,
 	half_day_employee_list: list | str | None = None,
@@ -153,6 +210,7 @@ def mark_employee_attendance(
 				late_entry=late_entry,
 				early_exit=early_exit,
 				shift=shift,
+				project=project,
 			)
 		)
 		attendance.insert()
