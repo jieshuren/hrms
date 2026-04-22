@@ -28,6 +28,15 @@ SUPPORTED_FIELD_TYPES = [
 
 
 @frappe.whitelist()
+def get_csrf_token() -> str:
+	"""返回当前会话的 CSRF token，供移动端等第三方客户端在 POST/PUT/DELETE 请求中携带。
+
+	若会话尚未生成 token，则即时生成并持久化到 session。
+	"""
+	return frappe.sessions.get_csrf_token()
+
+
+@frappe.whitelist()
 def get_current_user_info() -> dict:
 	current_user = frappe.session.user
 	user = frappe.db.get_value(

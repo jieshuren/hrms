@@ -177,6 +177,42 @@ def get_monthly_attendance_by_project(
 	)
 
 
+def _clean_existing_attendance(employee: str, attendance_date) -> None:
+	"""取消已提交、删除草稿的同日考勤记录，避免 DuplicateAttendance / OverlappingShift 冲突。
+
+	主要用于借调员工场景：员工原部门已有当日考勤时仍能在新项目下重新登记。
+	"""
+	existing = frappe.get_all(
+		"Attendance",
+		filters={
+			"employee": employee,
+			"attendance_date": attendance_date,
+			"docstatus": ["!=", 2],
+		},
+		fields=["name", "docstatus"],
+	)
+	for rec in existing:
+		try:
+			if rec.docstatus == 1:
+				doc = frappe.get_doc("Attendance", rec.name)
+				doc.flags.ignore_permissions = True
+				doc.cancel()
+			else:
+				frappe.delete_doc(
+					"Attendance",
+					rec.name,
+					force=True,
+					ignore_permissions=True,
+					delete_permanently=True,
+				)
+		except Exception:
+			# 清理失败则由后续 insert 的校验兜底报错
+			frappe.log_error(
+				title="mark_employee_attendance: clean existing failed",
+				message=frappe.get_traceback(),
+			)
+
+
 @frappe.whitelist()
 def mark_employee_attendance(
 	employee_list: list | str,
@@ -195,18 +231,19 @@ def mark_employee_attendance(
 	if isinstance(employee_list, str):
 		employee_list = json.loads(employee_list)
 
+	attendance_date = getdate(date)
+	effective_leave_type = leave_type if status == "On Leave" else None
+
 	for employee in employee_list:
-		leave_type = None
-		if status == "On Leave" and leave_type:
-			leave_type = leave_type
+		_clean_existing_attendance(employee, attendance_date)
 
 		attendance = frappe.get_doc(
 			dict(
 				doctype="Attendance",
 				employee=employee,
-				attendance_date=getdate(date),
+				attendance_date=attendance_date,
 				status=status,
-				leave_type=leave_type,
+				leave_type=effective_leave_type,
 				late_entry=late_entry,
 				early_exit=early_exit,
 				shift=shift,
