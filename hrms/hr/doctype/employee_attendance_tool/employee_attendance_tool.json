@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_copy": 1,
- "creation": "2016-01-27 14:59:47.849379",
+ "creation": "2026-04-21 01:22:29.237675",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -36,24 +36,24 @@
    "default": "Today",
    "fieldname": "date",
    "fieldtype": "Date",
-   "label": "Date"
+   "label": "日期"
   },
   {
    "fieldname": "department",
    "fieldtype": "Link",
-   "label": "部门",
+   "label": "\u90e8\u95e8",
    "options": "Department"
   },
   {
    "fieldname": "branch",
    "fieldtype": "Link",
-   "label": "Branch",
+   "label": "分支",
    "options": "Branch"
   },
   {
    "fieldname": "company",
    "fieldtype": "Link",
-   "label": "公司",
+   "label": "\u516c\u53f8",
    "options": "Company"
   },
   {
@@ -61,18 +61,18 @@
    "depends_on": "date",
    "fieldname": "marked_attendance_section",
    "fieldtype": "Section Break",
-   "label": "Marked Attendance"
+   "label": "已记录考勤"
   },
   {
    "fieldname": "marked_attendance_html",
    "fieldtype": "HTML",
-   "label": "Marked Attendance HTML"
+   "label": "考勤记录"
   },
   {
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "状态",
+   "label": "\u72b6\u6001",
    "options": "\nPresent\nAbsent\nHalf Day\nWork From Home"
   },
   {
@@ -81,7 +81,7 @@
    "description": "Set filters to fetch employees",
    "fieldname": "section_break_ackd",
    "fieldtype": "Section Break",
-   "label": "Get Employees"
+   "label": "获取员工"
   },
   {
    "fieldname": "column_break_bhny",
@@ -91,54 +91,54 @@
    "default": "0",
    "fieldname": "late_entry",
    "fieldtype": "Check",
-   "label": "迟到"
+   "label": "\u8fdf\u5230"
   },
   {
    "default": "0",
    "fieldname": "early_exit",
    "fieldtype": "Check",
-   "label": "早退"
+   "label": "\u65e9\u9000"
   },
   {
    "fieldname": "shift",
    "fieldtype": "Link",
-   "label": "班次",
+   "label": "\u73ed\u6b21",
    "mandatory_depends_on": "filter_by_shift",
    "options": "Shift Type"
   },
   {
    "fieldname": "employment_type",
    "fieldtype": "Link",
-   "label": "Employment Type",
+   "label": "雇佣类型",
    "options": "Employment Type"
   },
   {
    "fieldname": "designation",
    "fieldtype": "Link",
-   "label": "Designation",
+   "label": "职位",
    "options": "Designation"
   },
   {
    "fieldname": "employee_grade",
    "fieldtype": "Link",
-   "label": "Employee Grade",
+   "label": "员工职级",
    "options": "Employee Grade"
   },
   {
    "fieldname": "unmarked_employees_html",
    "fieldtype": "HTML",
-   "label": "Unmarked Employees HTML",
+   "label": "未标记员工",
    "read_only": 1
   },
   {
    "fieldname": "half_marked_employees_html",
    "fieldtype": "HTML",
-   "label": "Employees on Half Day HTML"
+   "label": "半日制员工"
   },
   {
    "fieldname": "half_day_status",
    "fieldtype": "Select",
-   "label": "另一半状态",
+   "label": "\u53e6\u4e00\u534a\u72b6\u6001",
    "options": "Present\nAbsent"
   },
   {
@@ -148,31 +148,31 @@
   {
    "fieldname": "get_employees",
    "fieldtype": "Button",
-   "label": "Get Employees"
+   "label": "获取员工"
   },
   {
    "collapsible": 1,
    "collapsible_depends_on": "eval:true",
    "fieldname": "select_employees_section",
    "fieldtype": "Section Break",
-   "label": "Select Employees"
+   "label": "选择员工"
   },
   {
    "fieldname": "unmarked_employee_header",
    "fieldtype": "HTML",
-   "label": "Unmarked Employee Header",
-   "options": "<h5>Unmarked Employees</h5>"
+   "label": "未标记员工标题",
+   "options": "<h5>未标记员工</h5>"
   },
   {
    "fieldname": "half_day_marked_employee_header",
    "fieldtype": "HTML",
-   "label": "Half Day Marked Employee Header",
-   "options": "<h5>Employees on Half Day</h5>"
+   "label": "半日制员工标识标题",
+   "options": "<h5>半日制员工</h5>"
   },
   {
    "fieldname": "horizontal_break",
    "fieldtype": "HTML",
-   "label": "Horizontal Break",
+   "label": "分隔线",
    "options": "<hr>"
   },
   {
@@ -186,7 +186,7 @@
  "hide_toolbar": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-08-07 09:26:38.614559",
+ "modified": "2026-04-23 12:14:27.125029",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Employee Attendance Tool",

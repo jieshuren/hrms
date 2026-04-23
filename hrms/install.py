@@ -1,12 +1,14 @@
 import click
 
 from hrms.setup import after_install as setup
+from hrms.setup import install_expense_claim_workflow
 
 
 def after_install():
 	try:
 		print("Setting up Frappe HR...")
 		setup()
+		install_expense_claim_workflow()
 
 		click.secho("Thank you for installing Frappe HR!", fg="green")
 

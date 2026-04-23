@@ -33,7 +33,7 @@
    "fieldname": "account_head",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Account Head",
+   "label": "税费科目",
    "oldfieldname": "account_head",
    "oldfieldtype": "Link",
    "options": "Account",
@@ -44,7 +44,7 @@
    "default": ":Company",
    "fieldname": "cost_center",
    "fieldtype": "Link",
-   "label": "Cost Center",
+   "label": "成本中心",
    "oldfieldname": "cost_center",
    "oldfieldtype": "Link",
    "options": "Cost Center"
@@ -52,7 +52,7 @@
   {
    "fieldname": "description",
    "fieldtype": "Small Text",
-   "label": "Description",
+   "label": "描述",
    "oldfieldname": "description",
    "oldfieldtype": "Small Text",
    "print_width": "300px",
@@ -64,7 +64,7 @@
    "fieldname": "rate",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Rate",
+   "label": "税率",
    "oldfieldname": "rate",
    "oldfieldtype": "Currency"
   },
@@ -73,7 +73,7 @@
    "fieldname": "tax_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "税额",
    "options": "currency"
   },
   {
@@ -81,7 +81,7 @@
    "fieldname": "total",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Total",
+   "label": "合计",
    "options": "currency",
    "read_only": 1
   },
@@ -92,7 +92,7 @@
   {
    "fieldname": "accounting_dimensions_section",
    "fieldtype": "Section Break",
-   "label": "Accounting Dimensions"
+   "label": "辅助核算"
   },
   {
    "fieldname": "dimension_col_break",
@@ -102,7 +102,7 @@
    "allow_on_submit": 1,
    "fieldname": "project",
    "fieldtype": "Link",
-   "label": "Project",
+   "label": "项目",
    "options": "Project"
   },
   {
@@ -113,7 +113,7 @@
    "columns": 2,
    "fieldname": "base_total",
    "fieldtype": "Currency",
-   "label": "Total (Company Currency)",
+   "label": "合计（本位币）",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -121,14 +121,14 @@
    "columns": 2,
    "fieldname": "base_tax_amount",
    "fieldtype": "Currency",
-   "label": "Amount (Company Currency)",
+   "label": "税额（本位币）",
    "options": "Company:company:default_currency",
    "read_only": 1
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2025-11-13 22:14:53.650756",
+ "modified": "2026-04-23 12:14:26.928962",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Taxes and Charges",

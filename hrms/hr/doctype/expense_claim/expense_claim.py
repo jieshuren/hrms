@@ -2,13 +2,15 @@
 # License: GNU General Public License v3. See license.txt
 
 
+from typing import Optional
+
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder.functions import Sum
-from frappe.utils import cstr, flt, get_link_to_form, today
+from frappe.utils import cstr, flt, get_link_to_form, now_datetime, today
 
 import erpnext
 from erpnext.accounts.doctype.repost_accounting_ledger.repost_accounting_ledger import (
@@ -72,26 +74,25 @@ class ExpenseClaim(AccountsController, PWANotificationsMixin):
 
 		precision = self.precision("grand_total")
 
-		if self.docstatus == 1:
-			if self.approval_status == "Approved":
-				if (
-					# set as paid
-					self.is_paid
-					or (
-						flt(self.total_sanctioned_amount) > 0
-						and (
-							# grand total is reimbursed
-							(flt(self.grand_total, precision) == flt(self.total_amount_reimbursed, precision))
-							# grand total (to be paid) is 0 since linked advances already cover the claimed amount
-							or (flt(self.grand_total, precision) == 0)
-						)
+		if self.approval_status == "Rejected":
+			status = "Rejected"
+		elif self.docstatus == 1 and self.approval_status == "Approved":
+			if (
+				# set as paid
+				self.is_paid
+				or (
+					flt(self.total_sanctioned_amount) > 0
+					and (
+						# grand total is reimbursed
+						(flt(self.grand_total, precision) == flt(self.total_amount_reimbursed, precision))
+						# grand total (to be paid) is 0 since linked advances already cover the claimed amount
+						or (flt(self.grand_total, precision) == 0)
 					)
-				):
-					status = "Paid"
-				elif flt(self.total_sanctioned_amount) > 0:
-					status = "Unpaid"
-			elif self.approval_status == "Rejected":
-				status = "Rejected"
+				)
+			):
+				status = "Paid"
+			elif flt(self.total_sanctioned_amount) > 0:
+				status = "Unpaid"
 
 		if update:
 			self.db_set("status", status)
@@ -933,3 +934,387 @@ def get_allocation_amount(paid_amount=None, claimed_amount=None, return_amount=N
 		return flt(paid_amount) - (flt(claimed_amount) + flt(return_amount))
 	else:
 		frappe.throw(_("Invalid parameters provided. Please pass the required arguments."))
+
+
+_PRIVILEGED_ROLES = {
+	"Administrator",
+	"System Manager",
+	"HR Manager",
+	"HR User",
+	"Finance Approver",
+	"General Manager",
+	"Cashier",
+	"Accounts Manager",
+	"Accounts User",
+}
+
+
+def expense_claim_query(user: Optional[str] = None) -> str:
+	"""permission_query_conditions 回调：返回 SQL WHERE 片段。"""
+	user = user or frappe.session.user
+	if not user or user == "Administrator":
+		return ""
+
+	user_roles = set(frappe.get_roles(user))
+	if user_roles & _PRIVILEGED_ROLES:
+		return ""
+
+	employee_info = frappe.db.get_value(
+		"Employee",
+		{"user_id": user, "status": "Active"},
+		["name", "department"],
+		as_dict=True,
+	)
+
+	safe_user = frappe.db.escape(user)
+	clauses = [f"`tabExpense Claim`.`owner` = {safe_user}"]
+
+	if employee_info:
+		employee_name = frappe.db.escape(employee_info.name)
+		clauses.append(f"`tabExpense Claim`.`expense_approver` = {safe_user}")
+		clauses.append(f"`tabExpense Claim`.`employee` = {employee_name}")
+
+		if employee_info.department:
+			safe_department = frappe.db.escape(employee_info.department)
+			clauses.append(
+				"(`tabExpense Claim`.`department` = {department} AND "
+				"`tabExpense Claim`.`workflow_state` = 'Pending Peer Verification')".format(
+					department=safe_department
+				)
+			)
+
+		subordinate_employees = frappe.db.sql_list(
+			"""
+			SELECT name FROM `tabEmployee`
+			WHERE reports_to = %s AND status = 'Active'
+			""",
+			(employee_info.name,),
+		)
+		if subordinate_employees:
+			placeholder = ",".join(frappe.db.escape(emp) for emp in subordinate_employees)
+			clauses.append(
+				"(`tabExpense Claim`.`employee` IN ({emps}) AND "
+				"`tabExpense Claim`.`workflow_state` NOT IN ('Draft', 'Pending Peer Verification'))".format(
+					emps=placeholder
+				)
+			)
+
+	return "(" + " OR ".join(clauses) + ")"
+
+
+def expense_claim_has_permission(doc, ptype: Optional[str] = None, user: Optional[str] = None) -> bool:
+	"""行级权限兜底（覆盖 get_doc / Form 查看）。"""
+	user = user or frappe.session.user
+	if user == "Administrator":
+		return True
+
+	user_roles = set(frappe.get_roles(user))
+	if user_roles & _PRIVILEGED_ROLES:
+		return True
+
+	if doc.owner == user:
+		return True
+	if getattr(doc, "expense_approver", None) == user:
+		return True
+
+	employee_info = frappe.db.get_value(
+		"Employee",
+		{"user_id": user, "status": "Active"},
+		["name", "department"],
+		as_dict=True,
+	)
+	if not employee_info:
+		return False
+
+	if getattr(doc, "employee", None) == employee_info.name:
+		return True
+
+	workflow_state = (getattr(doc, "workflow_state", None) or "").strip()
+
+	if (
+		ptype == "write"
+		and getattr(doc, "docstatus", 0) == 0
+		and getattr(doc, "department", None) == employee_info.department
+	):
+		return True
+
+	if (
+		workflow_state == "Pending Peer Verification"
+		and getattr(doc, "department", None) == employee_info.department
+	):
+		return True
+
+	if workflow_state not in {"Draft", "Pending Peer Verification"}:
+		applicant_reports_to = frappe.db.get_value(
+			"Employee", getattr(doc, "employee", None), "reports_to"
+		)
+		if applicant_reports_to == employee_info.name:
+			return True
+
+	return False
+
+
+def is_same_department_peer(doc, user: str) -> bool:
+	"""同部门、非申请人本人 = 可以点击验收。"""
+	if not doc or not user:
+		return False
+	if user == "Administrator":
+		return True
+	if user == (_doc_get(doc, "owner") or ""):
+		return False
+
+	doc_department = _doc_get(doc, "department")
+	if not doc_department:
+		return False
+
+	user_department = frappe.db.get_value(
+		"Employee", {"user_id": user, "status": "Active"}, "department"
+	)
+	return bool(user_department) and user_department == doc_department
+
+
+def is_department_head(doc, user: str) -> bool:
+	"""申请人 Employee.reports_to 对应的 user_id == 当前用户。"""
+	if not doc or not user:
+		return False
+	if user == "Administrator":
+		return True
+
+	employee = _doc_get(doc, "employee")
+	if not employee:
+		return False
+
+	reports_to = frappe.db.get_value("Employee", employee, "reports_to")
+	if not reports_to:
+		return False
+
+	head_user = frappe.db.get_value("Employee", reports_to, "user_id")
+	return bool(head_user) and head_user == user
+
+
+def _doc_get(doc, key: str):
+	"""兼容 Workflow safe_eval 传入 dict 或 Document。"""
+	if isinstance(doc, dict):
+		return doc.get(key)
+	return getattr(doc, key, None)
+
+
+_PEER_STATES = {"Pending Department Approval"}
+_DEPT_STATES = {"Pending Finance Approval"}
+_FINANCE_STATES = {"Pending GM Approval"}
+_GM_STATES = {"Approved"}
+
+
+def ensure_sanctioned_amounts_before_submit(doc, method: Optional[str] = None) -> None:
+	"""若审批链未手工填写核准金额，默认按申报金额全额核准。"""
+	import erpnext
+
+	expenses = getattr(doc, "expenses", None) or []
+	if not expenses:
+		return
+
+	updated = False
+	default_cost_center = None
+	if getattr(doc, "company", None):
+		default_cost_center = erpnext.get_default_cost_center(doc.company)
+		if not default_cost_center:
+			default_cost_center = frappe.db.get_value(
+				"Cost Center",
+				{"company": doc.company, "is_group": 0},
+				"name",
+			)
+	for row in expenses:
+		claimed = float(getattr(row, "amount", 0) or 0)
+		sanctioned = float(getattr(row, "sanctioned_amount", 0) or 0)
+		if claimed > 0 and sanctioned <= 0:
+			row.sanctioned_amount = claimed
+			updated = True
+		if default_cost_center and not getattr(row, "cost_center", None):
+			row.cost_center = default_cost_center
+			updated = True
+
+	if updated:
+		doc.calculate_total_amount()
+		doc.calculate_taxes()
+
+
+def handle_expense_claim_on_update(doc, method: Optional[str] = None) -> None:
+	"""Expense Claim.on_update 钩子入口。"""
+	new_state = (getattr(doc, "workflow_state", None) or "").strip()
+	if not new_state:
+		return
+
+	_record_approval_trail(doc, new_state)
+
+	if new_state == "Paid" and doc.docstatus == 1:
+		_auto_create_payment_entry(doc)
+
+
+def _record_approval_trail(doc, new_state: str) -> None:
+	"""在状态推进时把审批人和时间落在自定义字段上。"""
+	now = now_datetime()
+	user = frappe.session.user
+
+	if new_state in _PEER_STATES and not getattr(doc, "custom_peer_verifier", None):
+		doc.db_set("custom_peer_verifier", user, update_modified=False)
+		doc.db_set("custom_peer_verified_on", now, update_modified=False)
+	elif new_state in _DEPT_STATES and not getattr(doc, "custom_dept_head_approver", None):
+		doc.db_set("custom_dept_head_approver", user, update_modified=False)
+		doc.db_set("custom_dept_head_approved_on", now, update_modified=False)
+	elif new_state in _FINANCE_STATES and not getattr(doc, "custom_finance_approver", None):
+		doc.db_set("custom_finance_approver", user, update_modified=False)
+		doc.db_set("custom_finance_approved_on", now, update_modified=False)
+	elif new_state in _GM_STATES and not getattr(doc, "custom_gm_approver", None):
+		doc.db_set("custom_gm_approver", user, update_modified=False)
+		doc.db_set("custom_gm_approved_on", now, update_modified=False)
+
+
+def _notify_claimant_of_payment(doc, payment_entry_name: str) -> None:
+	"""付款成功后给报销人发送桌面/移动端通知 + Socket.IO 实时事件。"""
+	employee = getattr(doc, "employee", None)
+	if not employee:
+		return
+	user_id = frappe.db.get_value("Employee", employee, "user_id")
+	if not user_id:
+		return
+
+	subject = frappe._("报销单 {0} 已付款").format(doc.name)
+	amount = frappe.utils.fmt_money(
+		doc.total_sanctioned_amount or doc.total_claimed_amount or 0,
+		currency=getattr(doc, "currency", None),
+	)
+	body = frappe._("出纳已确认支付，金额：{0}。付款单号：{1}").format(amount, payment_entry_name)
+
+	try:
+		notif = frappe.new_doc("Notification Log")
+		notif.for_user = user_id
+		notif.from_user = frappe.session.user
+		notif.subject = subject
+		notif.email_content = body
+		notif.document_type = "Expense Claim"
+		notif.document_name = doc.name
+		notif.type = "Alert"
+		notif.insert(ignore_permissions=True)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "ExpenseClaim notify_claimant_of_payment")
+
+	try:
+		frappe.publish_realtime(
+			event="expense_claim_paid",
+			message={
+				"claim": doc.name,
+				"payment_entry": payment_entry_name,
+				"amount": amount,
+				"mode_of_payment": getattr(doc, "custom_cashier_mode_of_payment", None),
+			},
+			user=user_id,
+			after_commit=True,
+		)
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "ExpenseClaim publish_realtime")
+
+
+def _auto_create_payment_entry(doc) -> None:
+	"""出纳确认支付 → 自动创建并提交付款分录，冲销其他应付款。"""
+	if doc.docstatus != 1:
+		return
+	if getattr(doc, "custom_related_journal_entry", None):
+		return
+	if getattr(doc, "custom_related_payment_entry", None):
+		return
+	existing_je = _find_existing_bank_entry_for_claim(doc.name)
+	if existing_je:
+		doc.db_set("custom_related_journal_entry", existing_je, update_modified=False)
+		return
+
+	from hrms.hr.doctype.expense_claim.expense_claim import get_outstanding_amount_for_claim
+
+	selected_mode = (getattr(doc, "custom_cashier_mode_of_payment", None) or "").strip()
+	selected_account = _resolve_mode_of_payment_account(selected_mode, doc.company) if selected_mode else None
+
+	if not selected_mode and doc.mode_of_payment:
+		selected_mode = doc.mode_of_payment
+	if not selected_account and doc.bank_or_cash_account:
+		selected_account = doc.bank_or_cash_account
+
+	if not selected_account:
+		frappe.throw(
+			"未能确定出纳付款账户。请在移动端重新选择付款方式（确保该 Mode of Payment 已在 "
+			"Company 下配置默认账户），或在 Company 设置中填写『默认银行账户 / 默认现金账户』。"
+		)
+
+	outstanding_amount = get_outstanding_amount_for_claim(doc)
+	if outstanding_amount <= 0:
+		return
+
+	je = _make_bank_entry_for_expense_claim(doc, selected_account, outstanding_amount, selected_mode)
+	je.insert(ignore_permissions=True)
+	je.submit()
+
+	now = now_datetime()
+	doc.db_set("custom_cashier_user", frappe.session.user, update_modified=False)
+	doc.db_set("custom_paid_on", now, update_modified=False)
+	doc.db_set("is_paid", 1, update_modified=False)
+	doc.db_set("custom_related_journal_entry", je.name, update_modified=False)
+	doc.db_set("custom_related_payment_entry", None, update_modified=False)
+
+	_notify_claimant_of_payment(doc, je.name)
+
+
+def _make_bank_entry_for_expense_claim(doc, bank_account: str, amount: float, mode_of_payment: Optional[str] = None):
+	"""按官方 Make Bank Entry 思路创建 Journal Entry。"""
+	import erpnext
+
+	je = frappe.new_doc("Journal Entry")
+	je.voucher_type = "Bank Entry"
+	je.company = doc.company
+	je.posting_date = getattr(doc, "posting_date", None) or frappe.utils.nowdate()
+	je.cheque_no = doc.name
+	je.cheque_date = je.posting_date
+	je.user_remark = f"Payment against Expense Claim: {doc.name}"
+	if mode_of_payment:
+		je.mode_of_payment = mode_of_payment
+
+	cost_center = erpnext.get_default_cost_center(doc.company)
+
+	je.append(
+		"accounts",
+		{
+			"account": doc.payable_account,
+			"debit_in_account_currency": amount,
+			"party_type": "Employee",
+			"party": doc.employee,
+			"reference_type": "Expense Claim",
+			"reference_name": doc.name,
+			"cost_center": cost_center,
+		},
+	)
+	je.append(
+		"accounts",
+		{
+			"account": bank_account,
+			"credit_in_account_currency": amount,
+			"cost_center": cost_center,
+			"against_voucher_type": "Expense Claim",
+			"against_voucher": doc.name,
+		},
+	)
+
+	return je
+
+
+def _resolve_mode_of_payment_account(mode_of_payment: str, company: str) -> str | None:
+	if not mode_of_payment or not company:
+		return None
+	return frappe.db.get_value(
+		"Mode of Payment Account",
+		{"parent": mode_of_payment, "company": company},
+		"default_account",
+	)
+
+
+def _find_existing_bank_entry_for_claim(claim_name: str) -> str | None:
+	return frappe.db.exists(
+		"Journal Entry",
+		{"voucher_type": "Bank Entry", "cheque_no": claim_name, "docstatus": 1},
+	)

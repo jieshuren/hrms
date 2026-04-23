@@ -28,7 +28,7 @@
    "fieldname": "expense_date",
    "fieldtype": "Date",
    "in_list_view": 1,
-   "label": "Expense Date",
+   "label": "费用日期",
    "oldfieldname": "expense_date",
    "oldfieldtype": "Date",
    "print_width": "150px",
@@ -42,7 +42,7 @@
    "fieldname": "expense_type",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Expense Claim Type",
+   "label": "报销类型",
    "oldfieldname": "expense_type",
    "oldfieldtype": "Link",
    "options": "Expense Claim Type",
@@ -55,7 +55,7 @@
    "fieldname": "default_account",
    "fieldtype": "Link",
    "hidden": 1,
-   "label": "Default Account",
+   "label": "默认科目",
    "options": "Account",
    "read_only": 1
   },
@@ -65,7 +65,7 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "in_list_view": 1,
-   "label": "Description",
+   "label": "描述",
    "oldfieldname": "description",
    "oldfieldtype": "Small Text",
    "print_width": "300px",
@@ -75,7 +75,7 @@
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Amount",
+   "label": "金额",
    "no_copy": 1,
    "oldfieldname": "claim_amount",
    "oldfieldtype": "Currency",
@@ -92,7 +92,7 @@
    "fieldname": "sanctioned_amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
-   "label": "Sanctioned Amount",
+   "label": "核准金额",
    "oldfieldname": "sanctioned_amount",
    "oldfieldtype": "Currency",
    "options": "currency",
@@ -103,13 +103,13 @@
    "allow_on_submit": 1,
    "fieldname": "cost_center",
    "fieldtype": "Link",
-   "label": "Cost Center",
+   "label": "成本中心",
    "options": "Cost Center"
   },
   {
    "fieldname": "accounting_dimensions_section",
    "fieldtype": "Section Break",
-   "label": "Accounting Dimensions"
+   "label": "辅助核算"
   },
   {
    "fieldname": "dimension_col_break",
@@ -119,7 +119,7 @@
    "allow_on_submit": 1,
    "fieldname": "project",
    "fieldtype": "Link",
-   "label": "Project",
+   "label": "项目",
    "options": "Project"
   },
   {
@@ -133,7 +133,7 @@
   {
    "fieldname": "base_amount",
    "fieldtype": "Currency",
-   "label": "Amount (Company Currency)",
+   "label": "金额（本位币）",
    "oldfieldname": "claim_amount",
    "oldfieldtype": "Currency",
    "options": "Company:company:default_currency",
@@ -143,7 +143,7 @@
   {
    "fieldname": "base_sanctioned_amount",
    "fieldtype": "Currency",
-   "label": "Sanctioned Amount (Company Currency)",
+   "label": "核准金额（本位币）",
    "oldfieldname": "sanctioned_amount",
    "oldfieldtype": "Currency",
    "options": "Company:company:default_currency",
@@ -155,7 +155,7 @@
  "idx": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-10 19:21:50.625260",
+ "modified": "2026-04-23 12:14:26.469484",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Expense Claim Detail",

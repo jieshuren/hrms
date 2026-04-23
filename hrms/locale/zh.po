@@ -12446,3 +12446,1001 @@ msgstr "{0} 是必填项"
 
 msgid "{0} is required"
 msgstr "{0} 是必填项"
+
+
+msgid "Rating"
+msgstr "评分"
+
+msgid "Series"
+msgstr "编号规则"
+
+msgid "Amended From"
+msgstr "修正自"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "Remarks"
+msgstr "备注"
+
+msgid "另半状态"
+msgstr "另一半状态"
+
+msgid "Hours"
+msgstr "小时数"
+
+msgid "Comments"
+msgstr "备注"
+
+msgid "Total Amount"
+msgstr "总金额"
+
+msgid "Template Title"
+msgstr "模板标题"
+
+msgid "Criteria"
+msgstr "标准"
+
+msgid "Service Item"
+msgstr "服务项目"
+
+msgid "Frequency"
+msgstr "频率"
+
+msgid "Monthly"
+msgstr "每月"
+
+msgid "Quarterly"
+msgstr "每季度"
+
+msgid "Half Yearly"
+msgstr "每半年"
+
+msgid "Yearly"
+msgstr "每年"
+
+msgid "Expense"
+msgstr "费用"
+
+msgid "Email Address"
+msgstr "邮箱地址"
+
+msgid "Source"
+msgstr "来源"
+
+msgid "Source Name"
+msgstr "来源名称"
+
+msgid "Resume"
+msgstr "简历"
+
+msgid "Notes"
+msgstr "备注"
+
+msgid "Phone Number"
+msgstr "电话号码"
+
+msgid "Country"
+msgstr "国家"
+
+msgid "Details"
+msgstr "详情"
+
+msgid "Introduction"
+msgstr "介绍"
+
+msgid "Interest"
+msgstr "利息"
+
+msgid "Score"
+msgstr "得分"
+
+msgid "Manager"
+msgstr "主管"
+
+msgid "Weightage"
+msgstr "权重"
+
+msgid "Per Weightage Score"
+msgstr "加权得分"
+
+msgid "Assessment Result"
+msgstr "评估结果"
+
+msgid "Assessed On"
+msgstr "评估日期"
+
+msgid "Provident Fund"
+msgstr "公积金"
+
+msgid "Professional Tax"
+msgstr "职业税"
+
+msgid "Income Tax"
+msgstr "所得税"
+
+msgid "Net Pay (In Words)"
+msgstr "净工资（大写）"
+
+msgid "Hour Rate"
+msgstr "时薪"
+
+msgid "Amount Based On Formula"
+msgstr "基于公式计算金额"
+
+msgid "Amount"
+msgstr "金额"
+
+msgid "Condition"
+msgstr "条件"
+
+msgid "Tax Exempted Amount"
+msgstr "免税金额"
+
+msgid "Base Variable"
+msgstr "基础可变薪资"
+
+msgid "Taxable Earnings"
+msgstr "应税收入"
+
+msgid "Deduction Taxes"
+msgstr "扣减税"
+
+msgid "Payment Account"
+msgstr "付款账户"
+
+msgid "Salary Slip Based On"
+msgstr "工资单基于"
+
+msgid "Salary Slip Based On Timesheet"
+msgstr "工资单基于工时表"
+
+msgid "Post Grading Date"
+msgstr "过账日期"
+
+msgid "Select Payment Account"
+msgstr "选择付款账户"
+
+msgid "Submit Payment Entry"
+msgstr "提交付款凭证"
+
+msgid "Bank Account"
+msgstr "银行账户"
+
+msgid "Payment Order"
+msgstr "付款单"
+
+msgid "Pro-Rated Amount"
+msgstr "按比例金额"
+
+msgid "Declared Amount"
+msgstr "申报金额"
+
+msgid "Proof Required"
+msgstr "需要证明"
+
+msgid "Document"
+msgstr "文档"
+
+msgid "Exemption Category"
+msgstr "免税类别"
+
+msgid "Maximum Exempted Amount"
+msgstr "最大免税金额"
+
+msgid "Exemption Sub Category"
+msgstr "免税子类别"
+
+msgid "Trainer"
+msgstr "培训师"
+
+msgid "Planned"
+msgstr "计划"
+
+msgid "Unplanned"
+msgstr "未计划"
+
+msgid "Cancelled"
+msgstr "已取消"
+
+msgid "Training Employee"
+msgstr "培训员工"
+
+msgid "Start Time"
+msgstr "开始时间"
+
+msgid "End Time"
+msgstr "结束时间"
+
+msgid "Processing Date"
+msgstr "处理日期"
+
+msgid "Beginning of check-in period"
+msgstr "签到期开始"
+
+msgid "End of check-in period"
+msgstr "签到期结束"
+
+msgid "Auto Attendance"
+msgstr "自动考勤"
+
+msgid "Enable Auto Attendance"
+msgstr "启用自动考勤"
+
+msgid "Check-in Override"
+msgstr "覆盖签到"
+
+msgid "Allow Multiple Check-ins Per Day"
+msgstr "允许每天多次签到"
+
+msgid "Determine Check-in and Check-out Period Edges"
+msgstr "确定签到和签出周期边界"
+
+msgid "Working Hours Threshold For Absent"
+msgstr "缺勤工时阈值"
+
+msgid "Working Hours Threshold For Half Day"
+msgstr "半天假工时阈值"
+
+msgid "Unassigned Employees"
+msgstr "未分配员工"
+
+msgid "Approver Name"
+msgstr "审批人姓名"
+
+msgid "Attendance Status"
+msgstr "考勤状态"
+
+msgid "Half Day Reason"
+msgstr "半天假原因"
+
+msgid "Total Number of Leave Days"
+msgstr "请假总天数"
+
+msgid "Unused Leaves"
+msgstr "未使用假期"
+
+msgid "Leave Period Name"
+msgstr "假期期间名称"
+
+msgid "Is Active"
+msgstr "是否有效"
+
+msgid "Maximum Leave Allocation Allowed"
+msgstr "允许的最大假期分配"
+
+msgid "Allow the following roles to bypass Leave Block List"
+msgstr "允许以下角色绕过假期阻止列表"
+
+msgid "Block Dates"
+msgstr "阻止日期"
+
+msgid "List of Leave Block List Dates"
+msgstr "假期阻止列表日期列表"
+
+msgid "Applicable Department"
+msgstr "适用部门"
+
+msgid "Holiday List Name"
+msgstr "假期列表名称"
+
+msgid "Weekly Off"
+msgstr "周休"
+
+msgid "Get Weekly Off Dates"
+msgstr "获取周休日期"
+
+msgid "Holidays"
+msgstr "节假日"
+
+msgid "Clear Table"
+msgstr "清空表格"
+
+msgid "Add Holidays"
+msgstr "添加节假日"
+
+msgid "Terms"
+msgstr "条款"
+
+msgid "Body"
+msgstr "正文"
+
+msgid "Applicant Email"
+msgstr "申请人邮箱"
+
+msgid "Rejected"
+msgstr "已拒绝"
+
+msgid "Estimated Cost"
+msgstr "预估成本"
+
+msgid "Planned Count"
+msgstr "计划人数"
+
+msgid "Staffing Plan Details"
+msgstr "人员计划详情"
+
+msgid "Job Opening Status"
+msgstr "职位状态"
+
+msgid "Open"
+msgstr "开放"
+
+msgid "Closed"
+msgstr "已关闭"
+
+msgid "Desired Skill Set"
+msgstr "期望技能集"
+
+msgid "Publish on Website"
+msgstr "在网站上发布"
+
+msgid "Name of Prospective Customers"
+msgstr "潜在客户名称"
+
+msgid "Email ID"
+msgstr "邮箱ID"
+
+msgid "Not Yet Interviewed"
+msgstr "尚未面试"
+
+msgid "Job Applicant Status"
+msgstr "申请人状态"
+
+msgid "Rescheduled"
+msgstr "已重新安排"
+
+msgid "In-Person"
+msgstr "现场"
+
+msgid "Video"
+msgstr "视频"
+
+msgid "Telephone"
+msgstr "电话"
+
+msgid "Failed"
+msgstr "未达成"
+
+msgid "Skipped"
+msgstr "跳过"
+
+msgid "Under Consideration"
+msgstr "考虑中"
+
+msgid "Goal Description"
+msgstr "目标描述"
+
+msgid "Expected Outcome"
+msgstr "预期结果"
+
+msgid "Achievement Details"
+msgstr "成就详情"
+
+msgid "Goal Progress"
+msgstr "目标进度"
+
+msgid "Not Started"
+msgstr "未开始"
+
+msgid "Achieved"
+msgstr "已达成"
+
+msgid "Partially Achieved"
+msgstr "部分达成"
+
+msgid "Referral For"
+msgstr "推荐职位"
+
+msgid "Referral Date"
+msgstr "推荐日期"
+
+msgid "Referral Status"
+msgstr "推荐状态"
+
+msgid "Referral Bonus"
+msgstr "推荐奖金"
+
+msgid "Is Valid"
+msgstr "是否有效"
+
+msgid "Referral Name"
+msgstr "推荐人"
+
+msgid "Is Applicable"
+msgstr "是否适用"
+
+msgid "Funded"
+msgstr "资助"
+
+msgid "Unfunded"
+msgstr "未资助"
+
+msgid "Travel From Date"
+msgstr "出差开始日期"
+
+msgid "Travel To Date"
+msgstr "出差结束日期"
+
+msgid "Flight Required"
+msgstr "需要航班"
+
+msgid "Costing"
+msgstr "费用"
+
+msgid "Budget"
+msgstr "预算"
+
+msgid "Actual Cost"
+msgstr "实际成本"
+
+msgid "Itinerary"
+msgstr "行程"
+
+msgid "Departure Date"
+msgstr "出发日期"
+
+msgid "Arrival Date"
+msgstr "到达日期"
+
+msgid "Departure Location"
+msgstr "出发地点"
+
+msgid "Arrival Location"
+msgstr "到达地点"
+
+msgid "Vehicle Preference"
+msgstr "车辆偏好"
+
+msgid "Bus"
+msgstr "巴士"
+
+msgid "Last Odometer Reading"
+msgstr "上次里程表读数"
+
+msgid "Purchase Date"
+msgstr "购买日期"
+
+msgid "Chassis Number"
+msgstr "底盘号"
+
+msgid "Vehicle Value"
+msgstr "车辆价值"
+
+msgid "UOM"
+msgstr "单位"
+
+msgid "Service End Date"
+msgstr "服务结束日期"
+
+msgid "Service Date"
+msgstr "服务日期"
+
+msgid "Service Detail"
+msgstr "服务详情"
+
+msgid "Driver"
+msgstr "司机"
+
+msgid "License Plate"
+msgstr "车牌"
+
+msgid "Price"
+msgstr "价格"
+
+msgid "Fuel Type"
+msgstr "燃料类型"
+
+msgid "Fuel UOM"
+msgstr "燃料单位"
+
+msgid "Wheels"
+msgstr "轮子"
+
+msgid "Color"
+msgstr "颜色"
+
+msgid "Insurance Company"
+msgstr "保险公司"
+
+msgid "Policy No"
+msgstr "保单号"
+
+msgid "Outstanding"
+msgstr "未结清"
+
+msgid "Payable"
+msgstr "应付"
+
+msgid "Asset"
+msgstr "资产"
+
+msgid "Gratuity"
+msgstr "养老金"
+
+msgid "Other"
+msgstr "其他"
+
+msgid "Onboarding Template"
+msgstr "入职模板"
+
+msgid "Onboarding Begin Date"
+msgstr "入职开始日期"
+
+msgid "User ID"
+msgstr "用户ID"
+
+msgid "Activity"
+msgstr "活动"
+
+msgid "Task Description"
+msgstr "任务描述"
+
+msgid "Weight"
+msgstr "权重"
+
+msgid "Begin On"
+msgstr "开始日期"
+
+msgid "Activity Date"
+msgstr "活动日期"
+
+msgid "Multi-select"
+msgstr "多选"
+
+msgid "Separation Begin Date"
+msgstr "离职开始日期"
+
+msgid "Separation Template"
+msgstr "离职模板"
+
+msgid "Reason for Leaving"
+msgstr "离职原因"
+
+msgid "New Employer"
+msgstr "新雇主"
+
+msgid "From Company"
+msgstr "原公司"
+
+msgid "To Company"
+msgstr "新公司"
+
+msgid "From Department"
+msgstr "原部门"
+
+msgid "To Department"
+msgstr "新部门"
+
+msgid "From Branch"
+msgstr "原分支"
+
+msgid "To Branch"
+msgstr "新分支"
+
+msgid "From Designation"
+msgstr "原职位"
+
+msgid "To Designation"
+msgstr "新职位"
+
+msgid "Transfer"
+msgstr "调动"
+
+msgid "From Grade"
+msgstr "原职级"
+
+msgid "To Grade"
+msgstr "新职级"
+
+msgid "Promote"
+msgstr "晋升"
+
+msgid "Training Type"
+msgstr "培训类型"
+
+msgid "Employee Feedback"
+msgstr "员工反馈"
+
+msgid "Feedback Form"
+msgstr "反馈表"
+
+msgid "Feedback Criteria"
+msgstr "反馈标准"
+
+msgid "Submitted On"
+msgstr "提交日期"
+
+msgid "Certification"
+msgstr "认证"
+
+msgid "Beginner"
+msgstr "初级"
+
+msgid "Intermediate"
+msgstr "中级"
+
+msgid "Advanced"
+msgstr "高级"
+
+msgid "Expert"
+msgstr "专家"
+
+msgid "Max Leaves Allocated"
+msgstr "最大分配假期"
+
+msgid "Max Continuous Days Allowed"
+msgstr "允许的最大连续天数"
+
+msgid "Allocation Based On Leave Period"
+msgstr "基于假期期间分配"
+
+msgid "Normal Working Hours"
+msgstr "正常工作时长"
+
+msgid "Allow Overlap"
+msgstr "允许重叠"
+
+msgid "Apply to all employees automatically"
+msgstr "自动应用于所有员工"
+
+msgid "Encashment Threshold Days"
+msgstr "折现阈值天数"
+
+msgid "Max Encashable Leaves"
+msgstr "最大可折现假期"
+
+msgid "Non Encashable Leaves"
+msgstr "不可折现假期"
+
+msgid "Expire"
+msgstr "过期"
+
+msgid "Expire Carry Forwarded Leaves"
+msgstr "结转假期过期"
+
+msgid "Expire Unused Leaves"
+msgstr "未使用假期过期"
+
+msgid "Unused Leaves Expiry Duration"
+msgstr "未使用假期过期时长"
+
+msgid "Leave Deduction Component"
+msgstr "假期扣减组成部分"
+
+msgid "Payment Days Based On"
+msgstr "支付天数基于"
+
+msgid "Fortnightly"
+msgstr "每两周"
+
+msgid "Bi-Monthly"
+msgstr "每两月"
+
+msgid "Based On Payment Days"
+msgstr "基于支付天数"
+
+msgid "Max Benefits Amount"
+msgstr "最大福利金额"
+
+msgid "Help"
+msgstr "帮助"
+
+msgid "Show in Salary Slip"
+msgstr "在工资单中显示"
+
+msgid "Attendance Days"
+msgstr "考勤天数"
+
+msgid "Leave Days"
+msgstr "假期天数"
+
+msgid "Holiday Days"
+msgstr "节假日天数"
+
+msgid "Arrear Days"
+msgstr "补发天数"
+
+msgid "Disabled Days"
+msgstr "禁用天数"
+
+msgid "Rounded Total"
+msgstr "四舍五入总计"
+
+msgid "Component"
+msgstr "组成部分"
+
+msgid "Sub Total"
+msgstr "小计"
+
+msgid "Total In Words"
+msgstr "总计大写"
+
+msgid "Slab"
+msgstr "等级"
+
+msgid "Benefit Type"
+msgstr "福利类型"
+
+msgid "Approved Amount"
+msgstr "批准金额"
+
+msgid "Remaining Amount"
+msgstr "剩余金额"
+
+msgid "Approved On"
+msgstr "批准日期"
+
+msgid "Employee Tax Exemption Declaration"
+msgstr "员工免税申报"
+
+msgid "Employee Tax Exemption Proof Submission"
+msgstr "员工免税证明提交"
+
+msgid "Employee Tax Exemption Calculation"
+msgstr "员工免税计算"
+
+msgid "Declaration Amount"
+msgstr "申报金额"
+
+msgid "Proof Submission Date"
+msgstr "证明提交日期"
+
+msgid "Verification Date"
+msgstr "验证日期"
+
+msgid "Gratuity Rule"
+msgstr "养老金规则"
+
+msgid "Eligibility"
+msgstr "资格"
+
+msgid "Applicable Earnings"
+msgstr "适用收入"
+
+msgid "Minimum Eligibility"
+msgstr "最低资格"
+
+msgid "Applicable After (Days)"
+msgstr "适用后（天）"
+
+msgid "Applicable After (Months)"
+msgstr "适用后（月）"
+
+msgid "Calculation Based On"
+msgstr "计算基于"
+
+msgid "Current Month Earnings"
+msgstr "当月收入"
+
+msgid "Current Structured Earnings"
+msgstr "当月结构化收入"
+
+msgid "Percentage"
+msgstr "百分比"
+
+msgid "Applicable Amount"
+msgstr "适用金额"
+
+msgid "Applicable Days"
+msgstr "适用天数"
+
+msgid "Employee Advance"
+msgstr "员工预支"
+
+msgid "Return Amount"
+msgstr "归还金额"
+
+msgid "Pending Amount"
+msgstr "待处理金额"
+
+msgid "Repayment Info"
+msgstr "还款信息"
+
+msgid "Repayment Date"
+msgstr "还款日期"
+
+msgid "Mode of Payment"
+msgstr "付款方式"
+
+msgid "Repayment Account"
+msgstr "还款账户"
+
+msgid "Repayment Amount"
+msgstr "还款金额"
+
+msgid "Advance Account"
+msgstr "预支账户"
+
+msgid "Expense Description"
+msgstr "费用描述"
+
+msgid "Expense Amount"
+msgstr "费用金额"
+
+msgid "Advance Paid"
+msgstr "已付预支"
+
+msgid "Account Head"
+msgstr "科目"
+
+msgid "Tax"
+msgstr "税费"
+
+msgid "Tax Rate"
+msgstr "税率"
+
+msgid "Tax Amount"
+msgstr "税费金额"
+
+msgid "Total Tax Amount"
+msgstr "总税费金额"
+
+msgid "Grand Total"
+msgstr "总计"
+
+msgid "Total Advance"
+msgstr "总预支"
+
+msgid "Taxes and Charges"
+msgstr "税费"
+
+msgid "Account"
+msgstr "科目"
+
+msgid "Rate"
+msgstr "税率"
+
+msgid "Payment Details"
+msgstr "付款详情"
+
+msgid "Clearance Date"
+msgstr "清账日期"
+
+msgid "Payable Account"
+msgstr "应付科目"
+
+msgid "Delivery Trip"
+msgstr "配送单"
+
+msgid "未标记员工标题"
+msgstr "未标记员工标题"
+
+msgid "半日制员工标识标题"
+msgstr "半日制员工标识标题"
+
+msgid "分隔线"
+msgstr "分隔线"
+
+
+msgid "Active Customers"
+msgstr "活跃客户"
+
+msgid "Active Suppliers"
+msgstr "活跃供应商"
+
+msgid "Annual Purchase"
+msgstr "年度采购"
+
+msgid "Annual Sales"
+msgstr "年度销售"
+
+msgid "Applicant-to-Hire Percentage"
+msgstr "录用比例"
+
+msgid "Average Sales Order Value"
+msgstr "平均销售订单金额"
+
+msgid "Sales Orders Count"
+msgstr "销售订单数量"
+
+msgid "Timesheet Working Hours"
+msgstr "工时表工作小时"
+
+msgid "Total Incentive Given(Last month)"
+msgstr "总激励发放（上月）"
+
+msgid "Total Outgoing Salary(Last month)"
+msgstr "总薪资支出（上月）"
+
+msgid "Total Salary Structure"
+msgstr "薪资结构总数"
+
+msgid "Open Opportunity"
+msgstr "开放商机"
+
+msgid "Bulk Update"
+msgstr "批量更新"
+
+msgid "Download Backups"
+msgstr "下载备份"
+
+msgid "Export Data"
+msgstr "导出数据"
+
+msgid "Setup"
+msgstr "设置"
+
+msgid "Meeting"
+msgstr "会议"
+
+msgid "UTM Source"
+msgstr "UTM来源"
+
+msgid "Home"
+msgstr "首页"
+
+msgid "Point Of Sale"
+msgstr "销售点"
+
+msgid "Visual Plant Floor"
+msgstr "可视化车间"
+
+msgid "Customer Form Tour"
+msgstr "客户表单导览"
+
+msgid "Supplier Form Tour"
+msgstr "供应商表单导览"
+
+msgid "System Settings"
+msgstr "系统设置"
+
+msgid "Note: Email will not be sent to disabled users"
+msgstr "注意：邮件不会发送给已禁用的用户"
+
+msgid "Type of document to rename."
+msgstr "要重命名的文档类型"
+
+msgid "To apply condition on parent field use parent.field_name and"
+msgstr "要在父字段上应用条件，请使用parent.field_name和"
+
+msgid "Masters & Reports"
+msgstr "主数据与报表"
+
+msgid "Time"
+msgstr "工时"
+
+msgid "Activity Type"
+msgstr "活动类型"
+
+msgid "Job Applicant Stage"
+msgstr "职位申请人阶段"
+
+msgid "Applicant"
+msgstr "申请人"
+
+msgid "Appointments"
+msgstr "录用"
+
+msgid "Letter Template"
+msgstr "信函模板"
+
+msgid "KRA Template"
+msgstr "关键职责模板"
+
+msgid "Expenses"
+msgstr "费用"
+
+msgid "Advance Type"
+msgstr "预支类型"
+
+msgid "Vehicle Expense Claim"
+msgstr "车辆费用报销"
+
+msgid "Tax Exemption Category"
+msgstr "免税类别"
+
+msgid "Tax Exemption Sub Category"
+msgstr "免税子类别"
+
+msgid "Total Outgoing Salary (Last month)"
+msgstr "总薪资支出（上月）"
+
+msgid "Total Incentive Given (Last month)"
+msgstr "总激励发放（上月）"
+
+msgid "Department wise Salary (Last month)"
+msgstr "部门薪资（上月）"
+
+msgid "Designation wise Salary (Last month)"
+msgstr "职位薪资（上月）"

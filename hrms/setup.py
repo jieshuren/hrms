@@ -580,6 +580,179 @@ def run_post_install_patches():
 		frappe.flags.in_patch = False
 
 
+def install_expense_claim_workflow() -> None:
+	"""幂等安装 Expense Claim 的自定义工作流。"""
+	import frappe
+
+	workflow_name = "Expense Claim Approval"
+	doctype = "Expense Claim"
+	state_field = "workflow_state"
+
+	custom_roles = [
+		{"role_name": "Finance Approver", "desk_access": 1},
+		{"role_name": "General Manager", "desk_access": 1},
+		{"role_name": "Cashier", "desk_access": 1},
+	]
+	workflow_states = [
+		("Draft", "0", "Secondary"),
+		("Pending Peer Verification", "0", "Warning"),
+		("Pending Department Approval", "0", "Warning"),
+		("Pending Finance Approval", "0", "Warning"),
+		("Pending GM Approval", "0", "Warning"),
+		("Approved", "1", "Primary"),
+		("Paid", "1", "Success"),
+		("Rejected", "0", "Danger"),
+	]
+	workflow_actions = [
+		"Submit",
+		"Peer Verify",
+		"Peer Reject",
+		"Dept Approve",
+		"Dept Reject",
+		"Finance Approve",
+		"Finance Reject",
+		"GM Approve",
+		"GM Reject",
+		"Confirm Payment",
+	]
+	workflow_transitions = [
+		(
+			"Draft",
+			"Submit",
+			"Pending Peer Verification",
+			"Employee",
+			"doc.owner == frappe.session.user",
+			1,
+		),
+		(
+			"Pending Peer Verification",
+			"Peer Verify",
+			"Pending Department Approval",
+			"Employee",
+			'doc.department and frappe.session.user != doc.owner and frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "department") == doc.department',
+			0,
+		),
+		(
+			"Pending Peer Verification",
+			"Peer Reject",
+			"Rejected",
+			"Employee",
+			'doc.department and frappe.session.user != doc.owner and frappe.db.get_value("Employee", {"user_id": frappe.session.user, "status": "Active"}, "department") == doc.department',
+			0,
+		),
+		(
+			"Pending Department Approval",
+			"Dept Approve",
+			"Pending Finance Approval",
+			"Employee",
+			'doc.employee and frappe.db.get_value("Employee", frappe.db.get_value("Employee", doc.employee, "reports_to"), "user_id") == frappe.session.user',
+			0,
+		),
+		(
+			"Pending Department Approval",
+			"Dept Reject",
+			"Rejected",
+			"Employee",
+			'doc.employee and frappe.db.get_value("Employee", frappe.db.get_value("Employee", doc.employee, "reports_to"), "user_id") == frappe.session.user',
+			0,
+		),
+		("Pending Finance Approval", "Finance Approve", "Pending GM Approval", "Finance Approver", "", 0),
+		("Pending Finance Approval", "Finance Reject", "Rejected", "Finance Approver", "", 0),
+		("Pending GM Approval", "GM Approve", "Approved", "General Manager", "", 0),
+		("Pending GM Approval", "GM Reject", "Rejected", "General Manager", "", 0),
+		("Approved", "Confirm Payment", "Paid", "Cashier", "", 0),
+	]
+
+	for role in custom_roles:
+		name = role["role_name"]
+		if not frappe.db.exists("Role", name):
+			doc = frappe.new_doc("Role")
+			doc.role_name = name
+			doc.desk_access = role.get("desk_access", 1)
+			doc.insert(ignore_permissions=True)
+
+	for state_name, _doc_status, style in workflow_states:
+		if not frappe.db.exists("Workflow State", state_name):
+			doc = frappe.new_doc("Workflow State")
+			doc.workflow_state_name = state_name
+			doc.style = style
+			doc.insert(ignore_permissions=True)
+
+	for action_name in workflow_actions:
+		if not frappe.db.exists("Workflow Action Master", action_name):
+			doc = frappe.new_doc("Workflow Action Master")
+			doc.workflow_action_name = action_name
+			doc.insert(ignore_permissions=True)
+
+	existing = frappe.db.exists("Workflow", workflow_name)
+	if existing:
+		doc = frappe.get_doc("Workflow", workflow_name)
+	else:
+		doc = frappe.new_doc("Workflow")
+		doc.workflow_name = workflow_name
+
+	doc.document_type = doctype
+	doc.is_active = 1
+	doc.override_status = 0
+	doc.workflow_state_field = state_field
+	doc.send_email_alert = 0
+
+	doc.set("states", [])
+	for state_name, doc_status, _style in workflow_states:
+		update_field, update_value = _expense_claim_state_update_config(state_name)
+		doc.append(
+			"states",
+			{
+				"state": state_name,
+				"doc_status": doc_status,
+				"allow_edit": _expense_claim_allow_edit_role(state_name),
+				"update_field": update_field,
+				"update_value": update_value,
+			},
+		)
+
+	doc.set("transitions", [])
+	for state, action, next_state, role, condition, allow_self_approval in workflow_transitions:
+		doc.append(
+			"transitions",
+			{
+				"state": state,
+				"action": action,
+				"next_state": next_state,
+				"allowed": role,
+				"allow_self_approval": allow_self_approval,
+				"condition": condition or None,
+			},
+		)
+
+	if existing:
+		doc.save(ignore_permissions=True)
+	else:
+		doc.insert(ignore_permissions=True)
+
+
+def _expense_claim_allow_edit_role(state_name: str) -> str:
+	if state_name in {"Draft", "Pending Peer Verification", "Pending Department Approval", "Rejected"}:
+		return "Employee"
+	if state_name == "Pending Finance Approval":
+		return "Finance Approver"
+	if state_name == "Pending GM Approval":
+		return "General Manager"
+	if state_name in {"Approved", "Paid"}:
+		return "Cashier"
+	return "HR Manager"
+
+
+def _expense_claim_state_update_config(state_name: str) -> tuple[str, str]:
+	if state_name == "Approved":
+		return ("approval_status", "Approved")
+	if state_name == "Rejected":
+		return ("approval_status", "Rejected")
+	if state_name == "Draft":
+		return ("approval_status", "Draft")
+	return ("", "")
+
+
 # LENDING APP SETUP & CLEANUP
 def create_salary_slip_loan_fields():
 	if "lending" in frappe.get_installed_apps():

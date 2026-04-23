@@ -428,6 +428,21 @@ class TestExpenseClaim(HRMSTestSuite):
 		)
 		self.assertEqual(len(gl_entry), 0)
 
+	def test_rejected_draft_expense_claim_sets_rejected_status(self):
+		payable_account = get_payable_account(company_name)
+		expense_claim = make_expense_claim(
+			payable_account,
+			300,
+			200,
+			company_name,
+			"Travel Expenses - _TC3",
+			do_not_submit=True,
+			approval_status="Rejected",
+		)
+		expense_claim.save()
+
+		self.assertEqual(expense_claim.status, "Rejected")
+
 	def test_expense_approver_perms(self):
 		user = "test_approver_perm_emp@example.com"
 		make_employee(user, "_Test Company")

@@ -703,6 +703,70 @@ def get_company_cost_center_and_expense_account(company: str) -> dict:
 	)
 
 
+@frappe.whitelist()
+def get_expense_claim_type_category_map(company: str | None = None) -> dict[str, str]:
+	"""返回 Expense Claim Type 到费用大类的映射。
+
+	移动端需要这个接口把报销类型归到固定资产、管理费用等大类中。
+	"""
+	types = frappe.get_all("Expense Claim Type", fields=["name"])
+	if not types:
+		return {}
+
+	if not company:
+		return {row.name: "无法识别" for row in types}
+
+	accounts = frappe.get_all(
+		"Expense Claim Account",
+		filters={"company": company},
+		fields=["parent", "default_account"],
+	)
+	account_by_type = {row.parent: row.default_account for row in accounts if row.parent}
+
+	account_names = list({name for name in account_by_type.values() if name})
+	account_details: dict[str, dict] = {}
+	if account_names:
+		rows = frappe.get_all(
+			"Account",
+			filters={"name": ["in", account_names]},
+			fields=["name", "account_name", "parent_account"],
+		)
+		account_details = {row.name: row for row in rows}
+
+	def parse_category(path: str | None) -> str:
+		text = str(path or "")
+		if "固定资产" in text:
+			return "固定资产"
+		if "库存商品" in text:
+			return "库存商品"
+		if "财务费用" in text:
+			return "财务费用"
+		if "主营业务成本" in text:
+			return "主营业务成本"
+		if "其他业务成本" in text:
+			return "其他业务成本"
+		if "管理费用" in text:
+			return "管理费用"
+		return "无法识别"
+
+	mapping: dict[str, str] = {}
+	for row in types:
+		account_name = account_by_type.get(row.name)
+		if not account_name:
+			mapping[row.name] = "无法识别"
+			continue
+
+		leaf = account_details.get(account_name)
+		if not leaf:
+			mapping[row.name] = "无法识别"
+			continue
+
+		path = f"{leaf.get('parent_account') or ''} {leaf.get('account_name') or ''} {account_name}"
+		mapping[row.name] = parse_category(path)
+
+	return mapping
+
+
 # Form View APIs
 @frappe.whitelist()
 def get_doctype_fields(doctype: str) -> list[dict]:
@@ -828,3 +892,150 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 @frappe.whitelist()
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
 	return get_permitted_fields(doctype, permission_type="write")
+
+
+# Receipt Image Recognition
+@frappe.whitelist(methods=["POST"])
+def recognize_receipt_image(**kwargs):
+	"""
+	通过后端代理调用 Ollama 视觉模型进行报销票据图片识别。
+	后端代理解决 H5 环境下的 CORS 跨域限制。
+	优先使用请求参数中的 server_url，其次 site_config.json，最后回落到本地默认端口。
+	"""
+	import requests as http_requests
+	from requests.exceptions import RequestException
+
+	image_base64 = kwargs.get("image_base64")
+	model = kwargs.get("model")
+	server_url = kwargs.get("server_url")
+	category_hierarchy = kwargs.get("category_hierarchy")
+
+	if not image_base64:
+		frappe.throw("识别请求失败：未收到图片数据 (image_base64)")
+
+	# 服务地址优先级：请求参数 > site_config > 云端默认
+	ollama_server_url = (
+		(server_url or "").strip()
+		or (frappe.conf.get("ollama_server_url") or "").strip()
+		or "https://ollama.com/api"
+	)
+	ollama_model = (
+		(model or "").strip()
+		or (frappe.conf.get("ollama_model") or "").strip()
+		or "qwen3-vl:235b-instruct"
+	)
+	ollama_api_key = (frappe.conf.get("ollama_api_key") or "").strip()
+
+	# 标准 Ollama chat endpoint：base/api/chat
+	base_url = ollama_server_url.rstrip("/")
+	if base_url.endswith("/api"):
+		endpoint = f"{base_url}/chat"
+	else:
+		endpoint = f"{base_url}/api/chat"
+
+	category_instruction = ""
+	if category_hierarchy:
+		category_instruction = (
+			f"\n【分类层级参考】\n{category_hierarchy}\n\n"
+			"【分类要求】你必须根据票据内容，从上述层级结构中选择最匹配的一项作为「报销类型」，原样返回类型名，不得自造新类型。\n"
+			"注意：返回的「报销类型」必须是上面列出的某个具体类型（横线后面的名称），不要返回大类名称。\n"
+			"若无法判断或不在列表中，请返回「无法识别」。"
+		)
+	else:
+		category_instruction = (
+			"\n【分类要求】你必须根据票据内容，选择最匹配的一项作为「报销类型」，原样返回类型名，不得自造新类型。\n"
+			"若无法判断，请返回「无法识别」。"
+		)
+
+	prompt = (
+		"请识别这张报销单据照片，并仅返回一个 JSON 对象（不要 markdown，不要代码块）。\n"
+		"【强制】JSON 的键名必须全部使用中文，且只能使用下列 7 个键（不要出现英文键名）：\n"
+		"费用日期、金额、说明、报销类型、数量、单价、单位。\n"
+		"键含义：费用日期为 YYYY-MM-DD；金额、数量、单价为数字；说明、报销类型、单位为字符串。\n"
+		"请尽量从票面读取「数量」「单价」；若只有「金额」和「数量」而没有「单价」，用金额÷数量推算「单价」（保留合理小数）。\n"
+		"若只有「金额」和「单价」而没有「数量」，用金额÷单价推算「数量」。\n"
+		"「单位」填计量单位（如次、个、天、公里、小时）；认不出时数量填 1，单价或金额可填 0，说明可填空字符串。"
+		f"{category_instruction}"
+	)
+
+	payload = {
+		"model": ollama_model,
+		"stream": False,
+		"options": {"temperature": 0.1},
+		"messages": [{"role": "user", "content": prompt, "images": [image_base64]}],
+	}
+
+	headers = {"Content-Type": "application/json"}
+	if ollama_api_key:
+		headers["Authorization"] = f"Bearer {ollama_api_key}"
+
+	try:
+		response = http_requests.post(endpoint, json=payload, headers=headers, timeout=120)
+	except RequestException as exc:
+		frappe.throw(
+			f"无法连接到 Ollama 服务（{ollama_server_url}）。"
+			f"请检查网络连通性，以及 site_config.json 中的 ollama_server_url / ollama_api_key 配置。"
+			f"错误详情：{exc}"
+		)
+
+	if response.status_code >= 400:
+		err_text = response.text[:500]
+		frappe.log_error(
+			message=f"Ollama API Error\nURL: {endpoint}\nStatus: {response.status_code}\nResponse: {err_text}",
+			title="Ollama Receipt Recognition Failure",
+		)
+		msg = f"Ollama 服务返回错误（{response.status_code}）"
+		try:
+			err_data = response.json()
+			if isinstance(err_data, dict) and err_data.get("error"):
+				msg += f"：{err_data['error']}"
+		except Exception:
+			msg += f"：{err_text[:100]}"
+		frappe.throw(msg)
+
+	raw_response = response.json()
+	frappe.log_error(
+		message=f"OCR Raw Response:\n{raw_response}",
+		title="Receipt OCR Debug"
+	)
+	return raw_response
+
+
+@frappe.whitelist()
+def withdraw_expense_claim_to_draft(name: str):
+	"""将待审批的报销单撤回到草稿，供申请人修改后重新提交。"""
+	if not name:
+		frappe.throw("缺少报销单编号")
+
+	doc = frappe.get_doc("Expense Claim", name)
+	doc.check_permission("write")
+
+	if frappe.session.user != "Administrator" and doc.owner != frappe.session.user:
+		frappe.throw("只有单据创建人可以撤回修改")
+
+	if getattr(doc, "docstatus", 0) != 0:
+		frappe.throw("只有未入账的待审批报销单才能撤回修改")
+
+	if getattr(doc, "custom_related_journal_entry", None) or getattr(doc, "custom_related_payment_entry", None):
+		frappe.throw("该单据已关联财务凭证，无法撤回修改")
+
+	values = {
+		"workflow_state": "Draft",
+		"approval_status": "Draft",
+		"custom_peer_verifier": "",
+		"custom_peer_verified_on": None,
+		"custom_dept_head_approver": "",
+		"custom_dept_head_approved_on": None,
+		"custom_finance_approver": "",
+		"custom_finance_approved_on": None,
+		"custom_gm_approver": "",
+		"custom_gm_approved_on": None,
+	}
+	frappe.db.set_value("Expense Claim", name, values, update_modified=True)
+
+	from frappe.workflow.doctype.workflow_action.workflow_action import clear_workflow_actions
+
+	clear_workflow_actions("Expense Claim", name)
+	frappe.db.commit()
+
+	return frappe.get_doc("Expense Claim", name).as_dict()

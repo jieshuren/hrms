@@ -99,7 +99,10 @@ jinja = {
 # before_install = "hrms.install.before_install"
 after_install = "hrms.install.after_install"
 before_migrate = "hrms.setup.make_people_workspace_standard"
-after_migrate = "hrms.setup.update_select_perm_after_install"
+after_migrate = [
+	"hrms.setup.update_select_perm_after_install",
+	"hrms.setup.install_expense_claim_workflow",
+]
 
 setup_wizard_complete = "hrms.subscription_utils.update_erpnext_access"
 
@@ -135,13 +138,13 @@ before_app_uninstall = "hrms.setup.before_app_uninstall"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
-# has_permission = {
-# 	"Event": "frappe.desk.doctype.event.event.has_permission",
-# }
+permission_query_conditions = {
+	"Expense Claim": "hrms.hr.doctype.expense_claim.expense_claim.expense_claim_query",
+}
+
+has_permission = {
+	"Expense Claim": "hrms.hr.doctype.expense_claim.expense_claim.expense_claim_has_permission",
+}
 
 has_upload_permission = {"Employee": "erpnext.setup.doctype.employee.employee.has_upload_permission"}
 
@@ -216,6 +219,11 @@ doc_events = {
 	},
 	"Project": {"validate": "hrms.controllers.employee_boarding_controller.update_employee_boarding_status"},
 	"Task": {"on_update": "hrms.controllers.employee_boarding_controller.update_task"},
+	"Expense Claim": {
+		"before_submit": "hrms.hr.doctype.expense_claim.expense_claim.ensure_sanctioned_amounts_before_submit",
+		"on_update": "hrms.hr.doctype.expense_claim.expense_claim.handle_expense_claim_on_update",
+		"on_update_after_submit": "hrms.hr.doctype.expense_claim.expense_claim.handle_expense_claim_on_update",
+	},
 }
 
 # Scheduled Tasks
