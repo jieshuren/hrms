@@ -795,6 +795,39 @@ def get_attachments(dt: str, dn: str):
 
 
 @frappe.whitelist()
+def get_user_full_names(user_ids: str | list[str] | None = None) -> dict[str, str]:
+	"""批量返回用户显示姓名。
+
+	前端需要展示审批轨迹中的姓名时，通过这个接口查询，避免直接访问 User 资源导致权限错误。
+	"""
+	if isinstance(user_ids, str):
+		try:
+			import json
+
+			ids = json.loads(user_ids)
+		except Exception:
+			ids = [user_ids]
+	elif isinstance(user_ids, list):
+		ids = user_ids
+	else:
+		ids = []
+
+	clean_ids = [str(user_id).strip() for user_id in ids if str(user_id).strip()]
+	if not clean_ids:
+		return {}
+
+	rows = frappe.get_all(
+		"User",
+		fields=["name", "full_name", "username"],
+		filters={"name": ("in", clean_ids)},
+	)
+	return {
+		row.name: (row.full_name or row.username or row.name)
+		for row in rows
+	}
+
+
+@frappe.whitelist()
 def upload_base64_file(content, filename, dt=None, dn=None, fieldname=None):
 	import base64
 	import io
