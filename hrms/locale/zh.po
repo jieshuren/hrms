@@ -11852,3 +11852,597 @@ msgstr "迟到宽限期"
 #: hrms/hr/doctype/shift_request/shift_request.json
 msgid "部门"
 msgstr "部门"
+
+msgid "Accepted"
+msgstr "已接受"
+
+msgid "Account Not Found"
+msgstr "未找到账户"
+
+msgid "Accounting Ledger"
+msgstr "会计分类账"
+
+msgid "Action"
+msgstr "操作"
+
+msgid "Actions"
+msgstr "操作"
+
+msgid "Active"
+msgstr "在职"
+
+msgid "Advance Amount"
+msgstr "预支金额"
+
+msgid "Allocation was skipped due to exceeding annual allocation set in leave policy"
+msgstr "由于超出休假政策中设定的年度分配额度，分配已跳过"
+
+msgid "Archive"
+msgstr "归档"
+
+msgid "Are you sure you want to proceed?"
+msgstr "您确定要继续吗？"
+
+msgid "Arrear Component cannot be set for Salary Components based on taxable salary."
+msgstr "基于应税工资的薪资组成部分不能设置欠薪组成部分。"
+
+msgid "Assigning..."
+msgstr "正在分配..."
+
+msgid "Attendance for employee {0} is already marked for an overlapping shift {1}: {2}"
+msgstr "员工 {0} 的考勤已在重叠班次 {1} 中标记: {2}"
+
+msgid "Attendance for employee {0} is already marked for the following dates: {1}"
+msgstr "员工 {0} 的考勤已在以下日期标记: {1}"
+
+msgid "Bank"
+msgstr "银行"
+
+msgid "Bank Name"
+msgstr "银行名称"
+
+msgid "Branch"
+msgstr "分支"
+
+msgid "Cannot cancel Shift Assignment: {0} as it is linked to Employee Checkin: {1}"
+msgstr "无法取消班次分配: {0}，因为它与员工签到: {1} 相关联"
+
+msgid "Cannot create Salary Slip for Employee who has left before Payroll Period"
+msgstr "无法为在薪资期间之前离职的员工创建工资条"
+
+msgid "Cannot create or change transactions against an Appraisal Cycle with status {0}."
+msgstr "无法对状态为 {0} 的评估周期创建或更改交易。"
+
+msgid "Claimed amount of employee {0} exceeds maximum amount eligible for claim {1}"
+msgstr "员工 {0} 的申报金额超过了可申报的最高金额 {1}"
+
+msgid "Close"
+msgstr "关闭"
+
+msgid "Closing Balance"
+msgstr "期末余额"
+
+msgid "Company"
+msgstr "公司"
+
+msgid "Completed"
+msgstr "已完成"
+
+msgid "Continue"
+msgstr "继续"
+
+msgid "Cost"
+msgstr "成本"
+
+msgid "Cost Center"
+msgstr "成本中心"
+
+msgid "Create"
+msgstr "创建"
+
+msgid "Create Employee"
+msgstr "创建员工"
+
+msgid "Create Journal Entry"
+msgstr "创建日记账分录"
+
+msgid "Creation of Salary Structure Assignments has been queued. It may take a few minutes."
+msgstr "薪资结构分配已加入队列。可能需要几分钟。"
+
+msgid "Currency"
+msgstr "币种"
+
+msgid "Current"
+msgstr "当前"
+
+msgid "Customer"
+msgstr "客户"
+
+msgid "Date"
+msgstr "日期"
+
+msgid "Date Range"
+msgstr "日期范围"
+
+msgid "Date of Birth"
+msgstr "出生日期"
+
+msgid "Date of Joining"
+msgstr "入职日期"
+
+msgid "Department"
+msgstr "部门"
+
+msgid "Description"
+msgstr "描述"
+
+msgid "Designation"
+msgstr "职位"
+
+msgid "Disabled"
+msgstr "已禁用"
+
+msgid "Do you still want to proceed?"
+msgstr "您仍然要继续吗？"
+
+msgid "Do you want to update the Job Applicant {0} as {1} based on this interview result?"
+msgstr "您要根据此次面试结果将求职者 {0} 更新为 {1} 吗？"
+
+msgid "Document Status"
+msgstr "单据状态"
+
+msgid "Duplicate Entry"
+msgstr "重复录入"
+
+msgid "Earned Leaves are allocated as per the configured frequency via scheduler."
+msgstr "应计休假按照通过调度器配置的频率进行分配。"
+
+msgid "Email sent to {0}"
+msgstr "邮件已发送至 {0}"
+
+msgid "Employee"
+msgstr "员工"
+
+msgid "Employee Name"
+msgstr "员工姓名"
+
+msgid "Employee was marked Absent for not meeting the working hours threshold."
+msgstr "员工因未达到工作时长阈值而被标记为缺勤。"
+
+msgid "Employee {0} already has an Attendance Request {1} that overlaps with this period"
+msgstr "员工 {0} 已有一个考勤申请 {1} 与此时段重叠"
+
+msgid "Employee {0} already submitted an application {1} for the payroll period {2}"
+msgstr "员工 {0} 已为薪资期间 {2} 提交了申请 {1}"
+
+msgid "Employees"
+msgstr "员工"
+
+msgid "Enabled"
+msgstr "已启用"
+
+msgid "End"
+msgstr "结束"
+
+msgid "End Date"
+msgstr "结束日期"
+
+msgid "Error"
+msgstr "错误"
+
+msgid "Error Log"
+msgstr "错误日志"
+
+msgid "Expense Claim"
+msgstr "费用报销"
+
+msgid "Expired"
+msgstr "已过期"
+
+msgid "Failure"
+msgstr "失败"
+
+msgid "Feedback"
+msgstr "反馈"
+
+msgid "Filter Based On"
+msgstr "筛选基于"
+
+msgid "Fiscal Year"
+msgstr "会计年度"
+
+msgid "Friday"
+msgstr "星期五"
+
+msgid "From"
+msgstr "从"
+
+msgid "From Date"
+msgstr "起始日期"
+
+msgid "From Date cannot be greater than To Date"
+msgstr "起始日期不能大于结束日期"
+
+msgid "From and to dates are mandatory for recurring type additional salaries."
+msgstr "周期性类型的额外薪资必须填写起始和结束日期。"
+
+msgid "Full and Final Statement"
+msgstr "最终结算单"
+
+msgid "Gender"
+msgstr "性别"
+
+msgid "Goal"
+msgstr "目标"
+
+msgid "Goals"
+msgstr "目标"
+
+msgid "Group"
+msgstr "组"
+
+msgid "Group By"
+msgstr "分组依据"
+
+msgid "Holiday"
+msgstr "假日"
+
+msgid "Holiday List"
+msgstr "假日列表"
+
+msgid "Import Successful"
+msgstr "导入成功"
+
+msgid "In Progress"
+msgstr "进行中"
+
+msgid "Inactive"
+msgstr "停用"
+
+msgid "Income Tax Slab must be effective on or before Payroll Period Start Date: {0}"
+msgstr "所得税税率表必须在薪资期间开始日期或之前生效: {0}"
+
+msgid "Invalid"
+msgstr "无效"
+
+msgid "Invalid Action"
+msgstr "无效操作"
+
+msgid "Invalid Cost Center"
+msgstr "无效成本中心"
+
+msgid "Invalid Payroll Payable Account. The account currency must be {0} or {1}"
+msgstr "无效薪资应付账户。账户币种必须是 {0} 或 {1}"
+
+msgid "Is Group"
+msgstr "是组"
+
+msgid "Last Sync of Checkin"
+msgstr "上次签到同步"
+
+msgid "Leave Policy: {0} already assigned for Employee {1} for period {2} to {3}"
+msgstr "休假政策: {0} 已为员工 {1} 在期间 {2} 至 {3} 分配"
+
+msgid "Location"
+msgstr "地点"
+
+msgid "Make"
+msgstr "制作"
+
+msgid "Mandatory"
+msgstr "必填"
+
+msgid "Mark attendance for existing check-in/out logs before changing shift settings"
+msgstr "在更改班次设置之前，为现有的签到/签退记录标记考勤"
+
+msgid "Message"
+msgstr "消息"
+
+msgid "Missing Field"
+msgstr "缺少字段"
+
+msgid "Missing Fields"
+msgstr "缺少字段"
+
+msgid "Model"
+msgstr "模型"
+
+msgid "Monday"
+msgstr "星期一"
+
+msgid "Month"
+msgstr "月份"
+
+msgid "More"
+msgstr "更多"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "New"
+msgstr "新建"
+
+msgid "No Bank/Cash Account found for currency {0}. Please create one under company {1}."
+msgstr "未找到币种 {0} 的银行/现金账户。请在公司 {1} 下创建一个。"
+
+msgid "No Data"
+msgstr "无数据"
+
+msgid "No Salary Slips with {0} found for employee {1} for payroll period {2}."
+msgstr "在薪资期间 {2} 中未找到员工 {1} 的 {0} 工资条。"
+
+msgid "No active or default Salary Structure found for employee {0} for the given dates"
+msgstr "未找到员工 {0} 在给定日期的有效或默认薪资结构"
+
+msgid "No record found"
+msgstr "未找到记录"
+
+msgid "Not Allowed"
+msgstr "不允许"
+
+msgid "Note"
+msgstr "备注"
+
+msgid "Offer Date"
+msgstr "录用日期"
+
+msgid "Opening Balance"
+msgstr "期初余额"
+
+msgid "Outstanding Amount"
+msgstr "未付金额"
+
+msgid "Overtime Duration for {0} is greater than Maximum Overtime Hours Allowed"
+msgstr "{0} 的加班时长超过了允许的最大加班时数"
+
+msgid "Paid Amount"
+msgstr "已付金额"
+
+msgid "Parameter"
+msgstr "参数"
+
+msgid "Partial Success"
+msgstr "部分成功"
+
+msgid "Payment"
+msgstr "付款"
+
+msgid "Payroll Entry"
+msgstr "薪资录入"
+
+msgid "Payroll Payable"
+msgstr "薪资应付"
+
+msgid "Please enable default incoming account before creating Daily Work Summary Group"
+msgstr "在创建工作日报汇总组之前，请启用默认收款账户"
+
+msgid "Please select a Company"
+msgstr "请选择公司"
+
+msgid "Please set default template for Leave Approval Notification in HR Settings."
+msgstr "请在人力资源设置中设置休假审批通知的默认模板。"
+
+msgid "Please set default template for Leave Status Notification in HR Settings."
+msgstr "请在人力资源设置中设置休假状态通知的默认模板。"
+
+msgid "Please setup numbering series for Attendance via Setup > Numbering Series"
+msgstr "请通过设置 > 编号序列设置考勤的编号序列"
+
+msgid "Posting Date"
+msgstr "过账日期"
+
+msgid "Process Attendance After"
+msgstr "在此之后处理考勤"
+
+msgid "Processing of Shift Requests has been queued. It may take a few minutes."
+msgstr "班次申请处理已加入队列。可能需要几分钟。"
+
+msgid "Progress"
+msgstr "进度"
+
+msgid "Project"
+msgstr "项目"
+
+msgid "Reason"
+msgstr "原因"
+
+msgid "Receivable"
+msgstr "应收"
+
+msgid "Reference"
+msgstr "参考"
+
+msgid "Relieving Date"
+msgstr "离职日期"
+
+msgid "Reopen"
+msgstr "重新打开"
+
+msgid "Reports"
+msgstr "报表"
+
+msgid "Resolved"
+msgstr "已解决"
+
+msgid "Result"
+msgstr "结果"
+
+msgid "Return"
+msgstr "归还"
+
+msgid "Returned Amount"
+msgstr "已归还金额"
+
+msgid "Row {0}# Allocated amount {1} cannot be greater than unclaimed amount {2}"
+msgstr "第 {0} 行: 已分配金额 {1} 不能大于未申报金额 {2}"
+
+msgid "Row {0}: Cost Center {1} does not belong to Company {2}"
+msgstr "第 {0} 行: 成本中心 {1} 不属于公司 {2}"
+
+msgid "Row {0}: {1} is required in the expenses table to book an expense claim."
+msgstr "第 {0} 行: 费用表中需要 {1} 才能记账费用报销。"
+
+msgid "Salary Component {0} cannot be selected more than once in Employee Benefits"
+msgstr "薪资组成部分 {0} 在员工福利中不能选择多次"
+
+msgid "Salary Withholding {0} already exists for employee {1} for the selected period"
+msgstr "所选期间员工 {1} 的薪资扣留 {0} 已存在"
+
+msgid "Salary slip emails have been enqueued for sending. Check {0} for status."
+msgstr "工资条邮件已加入发送队列。请查看 {0} 了解状态。"
+
+msgid "Sales Invoice"
+msgstr "销售发票"
+
+msgid "Same Company is entered more than once"
+msgstr "同一公司被输入了多次"
+
+msgid "Saturday"
+msgstr "星期六"
+
+msgid "Save"
+msgstr "保存"
+
+msgid "Select Employees"
+msgstr "选择员工"
+
+msgid "Service Expenses"
+msgstr "服务费用"
+
+msgid "Shift"
+msgstr "班次"
+
+msgid "Start"
+msgstr "开始"
+
+msgid "Start Date"
+msgstr "开始日期"
+
+msgid "Start and end dates not in a valid Payroll Period, cannot calculate {0}."
+msgstr "开始和结束日期不在有效的薪资期间内，无法计算 {0}。"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Submit"
+msgstr "提交"
+
+msgid "Success"
+msgstr "成功"
+
+msgid "Sunday"
+msgstr "星期日"
+
+msgid "Suspended"
+msgstr "暂停"
+
+msgid "Task"
+msgstr "任务"
+
+msgid "The metrics for this report are calculated based on the {0}. Please set {0} in {1}."
+msgstr "此报告的指标基于 {0} 计算。请在 {1} 中设置 {0}。"
+
+msgid "The metrics for this report are calculated based on {0}. Please set {0} in {1}."
+msgstr "此报告的指标基于 {0} 计算。请在 {1} 中设置 {0}。"
+
+msgid "There are no arrear differences between existing and new salary structure components."
+msgstr "现有薪资结构组成部分与新组成部分之间没有欠薪差异。"
+
+msgid "There is no Salary Structure assigned to {0}. First assign a Salary Structure."
+msgstr "{0} 没有分配薪资结构。请先分配一个薪资结构。"
+
+msgid "Thursday"
+msgstr "星期四"
+
+msgid "Time Interval"
+msgstr "时间间隔"
+
+msgid "Timesheet"
+msgstr "工时表"
+
+msgid "Title"
+msgstr "标题"
+
+msgid "To"
+msgstr "至"
+
+msgid "To Date"
+msgstr "结束日期"
+
+msgid "Total"
+msgstr "总计"
+
+msgid "Total Billed Hours"
+msgstr "总计费工时"
+
+msgid "Total Holidays"
+msgstr "总假日数"
+
+msgid "Total Working Hours"
+msgstr "总工时"
+
+msgid "Total of all employee benefits cannot be greater that Max Benefits Amount {0}"
+msgstr "所有员工福利的总和不能大于最大福利金额 {0}"
+
+msgid "Total percentage against cost centers should be 100"
+msgstr "成本中心的总百分比应为 100"
+
+msgid "Transaction Name"
+msgstr "交易名称"
+
+msgid "Transaction Type"
+msgstr "交易类型"
+
+msgid "Transactions"
+msgstr "交易"
+
+msgid "Tuesday"
+msgstr "星期二"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Update"
+msgstr "更新"
+
+msgid "Updated status from {0} to {1} for date {2} in the attendance record {3}"
+msgstr "在考勤记录 {3} 中将日期 {2} 的状态从 {0} 更新为 {1}"
+
+msgid "User"
+msgstr "用户"
+
+msgid "Utilization"
+msgstr "利用率"
+
+msgid "Vehicle"
+msgstr "车辆"
+
+msgid "View"
+msgstr "查看"
+
+msgid "View Exchange Gain/Loss Journals"
+msgstr "查看汇兑损益日记账"
+
+msgid "Warning"
+msgstr "警告"
+
+msgid "Warning: Insufficient leave balance for Leave Type {0} in this allocation."
+msgstr "警告: 此分配中休假类型 {0} 的余额不足。"
+
+msgid "Wednesday"
+msgstr "星期三"
+
+msgid "Year"
+msgstr "年份"
+
+msgid "Your Interview session is rescheduled from {0} {1} - {2} to {3} {4} - {5}"
+msgstr "您的面试已从 {0} {1} - {2} 重新安排到 {3} {4} - {5}"
+
+msgid "{0} already has an active Shift Assignment {1} for some/all of these dates."
+msgstr "{0} 在这些日期的部分/全部已有一个有效的班次分配 {1}。"
+
+msgid "{0} is mandatory"
+msgstr "{0} 是必填项"
+
+msgid "{0} is required"
+msgstr "{0} 是必填项"
