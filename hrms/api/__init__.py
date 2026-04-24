@@ -948,6 +948,55 @@ def ensure_expense_claim_folders():
 	frappe.db.commit()
 	return "Folders ensured"
 
+@frappe.whitelist(methods=["POST"])
+def classify_expense_text(text_content: str, category_hierarchy: str, model: str | None = None) -> dict:
+	"""
+	基于纯文本内容对费用进行 AI 分类。无需图片，速度更快，成本更低。
+	"""
+	import json
+	import requests as http_requests
+	from requests.exceptions import RequestException
+
+	if not text_content:
+		return {"报销类型": "无法识别"}
+
+	ai_model = (model or "").strip() or "gemini-3.1-flash-lite-preview"
+	api_key = (frappe.conf.get("gemini_api_key") or "").strip()
+	
+	if not api_key:
+		try:
+			with open(".gemini_key", "r") as f:
+				api_key = f.read().strip()
+		except:
+			pass
+	
+	if not api_key:
+		frappe.throw("Gemini 分类失败：未配置 gemini_api_key。")
+
+	prompt = (
+		f"你是一个专业的财务审计助手。请根据提供的费用内容，将其归类到最合适的财务类型中。\n"
+		f"【分类层级参考】\n{category_hierarchy}\n\n"
+		f"【待分类内容】\n{text_content}\n\n"
+		"【要求】请仅返回一个 JSON 对象，包含「报销类型」键。值必须是上述层级中横线后面的确切类型名。\n"
+		"若无法判断，请返回「无法识别」。不要返回任何解释文字。"
+	)
+
+	endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{ai_model}:generateContent?key={api_key}"
+	payload = {
+		"contents": [{"parts": [{"text": prompt}]}],
+		"generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
+	}
+
+	try:
+		response = http_requests.post(endpoint, json=payload, timeout=30)
+		response.raise_for_status()
+		res_data = response.json()
+		content = res_data["candidates"][0]["content"]["parts"][0]["text"]
+		return json.loads(content)
+	except Exception as e:
+		frappe.log_error(f"Gemini Text Classification Error: {e}", "Expense Classification Failure")
+		return {"报销类型": "无法识别"}
+
 # Receipt Image Recognition
 @frappe.whitelist(methods=["POST"])
 def recognize_receipt_image(**kwargs):

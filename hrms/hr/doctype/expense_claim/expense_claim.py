@@ -1200,8 +1200,8 @@ def _queue_expense_claim_category_classification(doc, new_state: str) -> None:
 
 
 def classify_expense_claim_categories(claim_name: str) -> None:
-	"""部门领导审批后，静默为报销明细补齐 AI 分类。"""
-	from hrms.api import get_expense_claim_type_category_map, recognize_receipt_image
+	"""部门领导审批后，利用已识别的文字内容（语义理解）为报销明细补齐 AI 分类。"""
+	from hrms.api import get_expense_claim_type_category_map, classify_expense_text
 
 	if not claim_name:
 		return
@@ -1218,15 +1218,6 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 	if not expenses:
 		return
 
-	attachments = frappe.get_all(
-		"File",
-		fields=["name", "file_url"],
-		filters={"attached_to_doctype": "Expense Claim", "attached_to_name": claim.name},
-		order_by="creation asc",
-	)
-	if not attachments:
-		return
-
 	allowed_types = [row.name for row in frappe.get_all("Expense Claim Type", fields=["name"])]
 	if not allowed_types:
 		return
@@ -1235,29 +1226,28 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 	hierarchy_text = _build_expense_type_hierarchy(allowed_types, type_category_map)
 	changed = False
 
-	for idx, row in enumerate(expenses):
+	for row in expenses:
 		current_type = str(getattr(row, "expense_type", "") or "").strip()
+		# 如果已经有具体分类且不是占位符，跳过
 		if current_type and current_type not in _EXPENSE_CATEGORY_PLACEHOLDER_TYPES:
 			continue
-		if idx >= len(attachments):
-			break
 
-		file_doc = frappe.get_doc("File", attachments[idx].name)
-		content = file_doc.get_content()
-		if not content:
+		# 利用已提取的文本内容进行分类，不再重复扫描图片
+		text_to_classify = f"单据名称: {row.custom_receipt_item_name or ''}, 说明: {row.description or ''}"
+		if not text_to_classify.replace("单据名称: , 说明: ", "").strip():
 			continue
-		if isinstance(content, str):
-			content = content.encode()
 
-		image_base64 = base64.b64encode(content).decode()
-		response = recognize_receipt_image(
-			image_base64=image_base64,
+		response = classify_expense_text(
+			text_content=text_to_classify,
 			category_hierarchy=hierarchy_text,
 		)
-		predicted_type = _parse_predicted_expense_type(response, allowed_types)
-		if not predicted_type:
+		
+		# 提取分类结果
+		predicted_type = response.get("报销类型")
+		if not predicted_type or predicted_type == "无法识别":
 			continue
-		if current_type != predicted_type:
+			
+		if predicted_type in allowed_types and current_type != predicted_type:
 			row.expense_type = predicted_type
 			changed = True
 
@@ -1266,7 +1256,7 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 		claim.calculate_total_amount()
 		claim.calculate_taxes()
 
-	claim.custom_ai_category_classified_on = now_datetime()
+	claim.custom_ai_category_classified_on = frappe.utils.now_datetime()
 	claim.flags.skip_ai_category_classification = True
 	claim.save(ignore_permissions=True)
 	claim.publish_update()

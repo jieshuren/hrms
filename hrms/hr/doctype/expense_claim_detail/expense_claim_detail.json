@@ -49,13 +49,16 @@
    "fieldname": "expense_type",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "报销类型",
+   "label": "费用分类 (AI预填)",
    "oldfieldname": "expense_type",
    "oldfieldtype": "Link",
    "options": "Expense Claim Type",
    "print_width": "150px",
    "reqd": 1,
-   "width": "150px"
+   "width": "150px",
+   "bold": 1,
+   "columns": 3,
+   "description": "AI 根据单据内容自动分类。若不准确，请财务人员手动点击修正。"
   },
   {
    "depends_on": "expense_type",
