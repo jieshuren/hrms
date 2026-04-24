@@ -2,6 +2,9 @@
 # License: GNU General Public License v3. See license.txt
 
 
+import base64
+import json
+import re
 from typing import Optional
 
 import frappe
@@ -28,6 +31,10 @@ from erpnext.controllers.accounts_controller import AccountsController
 import hrms
 from hrms.hr.utils import set_employee_name, share_doc_with_approver, validate_active_employee
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
+
+
+_EXPENSE_CATEGORY_CLASSIFICATION_JOB_PREFIX = "expense-claim-ai-category"
+_EXPENSE_CATEGORY_PLACEHOLDER_TYPES = {"Others", "无法识别"}
 
 
 class InvalidExpenseApproverError(frappe.ValidationError):
@@ -1138,11 +1145,15 @@ def ensure_sanctioned_amounts_before_submit(doc, method: Optional[str] = None) -
 
 def handle_expense_claim_on_update(doc, method: Optional[str] = None) -> None:
 	"""Expense Claim.on_update 钩子入口。"""
+	if getattr(getattr(doc, "flags", None), "skip_ai_category_classification", False):
+		return
+
 	new_state = (getattr(doc, "workflow_state", None) or "").strip()
 	if not new_state:
 		return
 
 	_record_approval_trail(doc, new_state)
+	_queue_expense_claim_category_classification(doc, new_state)
 
 	if new_state == "Paid" and doc.docstatus == 1:
 		_auto_create_payment_entry(doc)
@@ -1165,6 +1176,213 @@ def _record_approval_trail(doc, new_state: str) -> None:
 	elif new_state in _GM_STATES and not getattr(doc, "custom_gm_approver", None):
 		doc.db_set("custom_gm_approver", user, update_modified=False)
 		doc.db_set("custom_gm_approved_on", now, update_modified=False)
+
+
+def _queue_expense_claim_category_classification(doc, new_state: str) -> None:
+	if new_state not in _DEPT_STATES:
+		return
+	if getattr(doc, "docstatus", 0) != 0:
+		return
+	if getattr(doc, "custom_ai_category_classified_on", None):
+		return
+	if not getattr(doc, "name", None):
+		return
+
+	job_id = f"{_EXPENSE_CATEGORY_CLASSIFICATION_JOB_PREFIX}::{doc.name}"
+	frappe.enqueue(
+		classify_expense_claim_categories,
+		claim_name=doc.name,
+		queue="short",
+		timeout=1200,
+		job_id=job_id,
+		deduplicate=True,
+	)
+
+
+def classify_expense_claim_categories(claim_name: str) -> None:
+	"""部门领导审批后，静默为报销明细补齐 AI 分类。"""
+	from hrms.api import get_expense_claim_type_category_map, recognize_receipt_image
+
+	if not claim_name:
+		return
+
+	claim = frappe.get_doc("Expense Claim", claim_name)
+	if getattr(claim, "docstatus", 0) != 0:
+		return
+	if (getattr(claim, "workflow_state", "") or "").strip() not in _DEPT_STATES:
+		return
+	if getattr(claim, "custom_ai_category_classified_on", None):
+		return
+
+	expenses = list(claim.get("expenses") or [])
+	if not expenses:
+		return
+
+	attachments = frappe.get_all(
+		"File",
+		fields=["name", "file_url"],
+		filters={"attached_to_doctype": "Expense Claim", "attached_to_name": claim.name},
+		order_by="creation asc",
+	)
+	if not attachments:
+		return
+
+	allowed_types = [row.name for row in frappe.get_all("Expense Claim Type", fields=["name"])]
+	if not allowed_types:
+		return
+
+	type_category_map = get_expense_claim_type_category_map(claim.company)
+	hierarchy_text = _build_expense_type_hierarchy(allowed_types, type_category_map)
+	changed = False
+
+	for idx, row in enumerate(expenses):
+		current_type = str(getattr(row, "expense_type", "") or "").strip()
+		if current_type and current_type not in _EXPENSE_CATEGORY_PLACEHOLDER_TYPES:
+			continue
+		if idx >= len(attachments):
+			break
+
+		file_doc = frappe.get_doc("File", attachments[idx].name)
+		content = file_doc.get_content()
+		if not content:
+			continue
+		if isinstance(content, str):
+			content = content.encode()
+
+		image_base64 = base64.b64encode(content).decode()
+		response = recognize_receipt_image(
+			image_base64=image_base64,
+			category_hierarchy=hierarchy_text,
+		)
+		predicted_type = _parse_predicted_expense_type(response, allowed_types)
+		if not predicted_type:
+			continue
+		if current_type != predicted_type:
+			row.expense_type = predicted_type
+			changed = True
+
+	if changed:
+		claim.set_expense_account(validate=True)
+		claim.calculate_total_amount()
+		claim.calculate_taxes()
+
+	claim.custom_ai_category_classified_on = now_datetime()
+	claim.flags.skip_ai_category_classification = True
+	claim.save(ignore_permissions=True)
+	claim.publish_update()
+
+
+def _build_expense_type_hierarchy(allowed_types: list[str], type_category_map: dict[str, str]) -> str:
+	grouped: dict[str, list[str]] = {}
+	for expense_type in allowed_types:
+		category = type_category_map.get(expense_type) or "无法识别"
+		grouped.setdefault(category, []).append(expense_type)
+
+	if "无法识别" not in grouped:
+		grouped["无法识别"] = []
+	if "无法识别" not in grouped["无法识别"]:
+		grouped["无法识别"].insert(0, "无法识别")
+
+	lines = ["【可选报销类型层级结构】"]
+	for category, types in grouped.items():
+		if not types:
+			lines.append(f"- {category}")
+		else:
+			lines.append(f"- {category}:")
+			for expense_type in types:
+				lines.append(f"  - {expense_type}")
+	return "\n".join(lines)
+
+
+def _parse_predicted_expense_type(response, allowed_types: list[str]) -> str:
+	content = response.get("message", {}).get("content") if isinstance(response, dict) else response
+	raw = content or response or ""
+	if isinstance(raw, dict):
+		payload = raw
+	else:
+		payload = _parse_ai_json(str(raw))
+
+	candidate = str(
+		payload.get("报销类型")
+		or payload.get("费用类型")
+		or payload.get("类型")
+		or payload.get("expense_type")
+		or ""
+	).strip()
+	if candidate in allowed_types:
+		return candidate
+	if "Others" in allowed_types:
+		return "Others"
+	if allowed_types:
+		return allowed_types[0]
+	return ""
+
+
+def _parse_ai_json(text: str) -> dict:
+	text = (text or "").strip()
+	if not text:
+		return {}
+	try:
+		payload = json.loads(text)
+		if isinstance(payload, dict):
+			return payload
+	except Exception:
+		pass
+
+	fenced = re.search(r"```json\s*([\s\S]*?)\s*```", text, re.I) or re.search(
+		r"```\s*([\s\S]*?)\s*```", text, re.I
+	)
+	if fenced:
+		try:
+			payload = json.loads(fenced.group(1).strip())
+			if isinstance(payload, dict):
+				return payload
+		except Exception:
+			pass
+
+	for chunk in _extract_json_chunks(text):
+		try:
+			payload = json.loads(chunk)
+			if isinstance(payload, dict):
+				return payload
+		except Exception:
+			continue
+	return {}
+
+
+def _extract_json_chunks(text: str) -> list[str]:
+	result: list[str] = []
+	start = -1
+	depth = 0
+	in_string = False
+	escape = False
+	for idx, ch in enumerate(text):
+		if in_string:
+			if escape:
+				escape = False
+				continue
+			if ch == "\\":
+				escape = True
+				continue
+			if ch == '"':
+				in_string = False
+			continue
+		if ch == '"':
+			in_string = True
+			continue
+		if ch == "{":
+			if depth == 0:
+				start = idx
+			depth += 1
+			continue
+		if ch == "}":
+			if depth <= 0:
+				continue
+			depth -= 1
+			if depth == 0 and start >= 0:
+				result.append(text[start : idx + 1])
+				start = -1
+	return result
 
 
 def _notify_claimant_of_payment(doc, payment_entry_name: str) -> None:

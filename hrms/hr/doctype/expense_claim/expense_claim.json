@@ -53,6 +53,7 @@
   "column_break_24",
   "clearance_date",
   "remark",
+  "custom_ai_category_classified_on",
   "accounting_dimensions_section",
   "project",
   "dimension_col_break",
@@ -214,16 +215,24 @@
    "read_only": 1
   },
   {
-   "fieldname": "remark",
-   "fieldtype": "Small Text",
-   "label": "\u5907\u6ce8",
-   "no_copy": 1,
-   "oldfieldname": "remark",
-   "oldfieldtype": "Small Text"
+    "fieldname": "remark",
+    "fieldtype": "Small Text",
+    "label": "\u5907\u6ce8",
+    "no_copy": 1,
+    "oldfieldname": "remark",
+    "oldfieldtype": "Small Text"
   },
   {
-   "fieldname": "accounting_details",
-   "fieldtype": "Section Break",
+   "fieldname": "custom_ai_category_classified_on",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "label": "AI 分类完成时间",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+    "fieldname": "accounting_details",
+    "fieldtype": "Section Break",
    "label": "\u4f1a\u8ba1\u4fe1\u606f"
   },
   {

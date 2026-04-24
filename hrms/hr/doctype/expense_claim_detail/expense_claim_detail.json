@@ -72,6 +72,42 @@
    "width": "300px"
   },
   {
+   "fieldname": "custom_receipt_item_name",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "票据名称",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "custom_receipt_vendor",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "供应商",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "custom_receipt_type",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "单据类型",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "custom_receipt_total_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "票据总额",
+   "no_copy": 1,
+   "options": "currency"
+  },
+  {
+   "fieldname": "custom_receipt_index",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "票据序号",
+   "no_copy": 1
+  },
+  {
    "fieldname": "amount",
    "fieldtype": "Currency",
    "in_list_view": 1,
