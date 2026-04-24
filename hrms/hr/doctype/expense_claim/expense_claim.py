@@ -1034,14 +1034,12 @@ def expense_claim_has_permission(doc, ptype: Optional[str] = None, user: Optiona
 	if (
 		ptype == "write"
 		and getattr(doc, "docstatus", 0) == 0
+		and workflow_state == "Pending Peer Verification"
 		and getattr(doc, "department", None) == employee_info.department
 	):
 		return True
 
-	if (
-		workflow_state == "Pending Peer Verification"
-		and getattr(doc, "department", None) == employee_info.department
-	):
+	if workflow_state == "Pending Peer Verification" and getattr(doc, "department", None) == employee_info.department:
 		return True
 
 	if workflow_state not in {"Draft", "Pending Peer Verification"}:

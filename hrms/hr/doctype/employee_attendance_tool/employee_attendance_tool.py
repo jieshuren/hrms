@@ -131,7 +131,7 @@ def get_attendance_by_project(
 		return []
 	return frappe.get_all(
 		"Attendance",
-		fields=["name", "employee", "employee_name", "status", "shift", "docstatus"],
+		fields=["name", "employee", "employee_name", "status", "leave_type", "shift", "docstatus"],
 		filters={
 			"project": project,
 			"attendance_date": getdate(date),
@@ -165,7 +165,7 @@ def get_monthly_attendance_by_project(
 		"Attendance",
 		fields=[
 			"name", "employee", "employee_name", "attendance_date",
-			"status", "in_time", "out_time", "working_hours",
+			"status", "leave_type", "in_time", "out_time", "working_hours",
 			"shift", "late_entry", "early_exit", "project",
 		],
 		filters={
