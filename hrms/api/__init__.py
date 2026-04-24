@@ -789,7 +789,7 @@ def get_doctype_states(doctype: str) -> dict:
 def get_attachments(dt: str, dn: str):
 	return frappe.get_list(
 		"File",
-		fields=["name", "file_name", "file_url", "is_private"],
+		fields=["name", "file_name", "file_url", "is_private", "folder"],
 		filters={"attached_to_name": str(dn), "attached_to_doctype": dt},
 		order_by="creation asc",
 	)
@@ -927,6 +927,26 @@ def get_allowed_states_for_workflow(workflow: dict, user_id: str) -> list[str]:
 def get_permitted_fields_for_write(doctype: str) -> list[str]:
 	return get_permitted_fields(doctype, permission_type="write")
 
+
+@frappe.whitelist()
+def ensure_expense_claim_folders():
+	paths = [
+		(None, "Home"),
+		("Home", "Attachments"),
+		("Home/Attachments", "Expense Claim"),
+		("Home/Attachments/Expense Claim", "单据图片"),
+		("Home/Attachments/Expense Claim", "实物图片")
+	]
+	for parent, name in paths:
+		if not frappe.db.exists("File", {"file_name": name, "is_folder": 1, "folder": parent}):
+			frappe.get_doc({
+				"doctype": "File",
+				"file_name": name,
+				"is_folder": 1,
+				"folder": parent
+			}).insert(ignore_permissions=True)
+	frappe.db.commit()
+	return "Folders ensured"
 
 # Receipt Image Recognition
 @frappe.whitelist(methods=["POST"])
