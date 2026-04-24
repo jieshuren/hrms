@@ -952,10 +952,10 @@ def ensure_expense_claim_folders():
 @frappe.whitelist(methods=["POST"])
 def recognize_receipt_image(**kwargs):
 	"""
-	通过后端代理调用 Ollama 视觉模型进行报销票据图片识别。
-	后端代理解决 H5 环境下的 CORS 跨域限制。
-	优先使用请求参数中的 server_url，其次 site_config.json，最后回落到本地默认端口。
+	通过后端代理调用 AI 模型进行报销票据图片识别。
+	支持 Ollama 和 Google Gemini 两种后端。
 	"""
+	import json
 	import requests as http_requests
 	from requests.exceptions import RequestException
 
@@ -967,32 +967,21 @@ def recognize_receipt_image(**kwargs):
 	if not image_base64:
 		frappe.throw("识别请求失败：未收到图片数据 (image_base64)")
 
-	# 服务地址优先级：请求参数 > site_config > 云端默认
-	ollama_server_url = (
-		(server_url or "").strip()
-		or (frappe.conf.get("ollama_server_url") or "").strip()
-		or "https://ollama.com/api"
-	)
-	ollama_model = (
+	# 模型选择
+	ai_model = (
 		(model or "").strip()
 		or (frappe.conf.get("ollama_model") or "").strip()
-		or "qwen3-vl:235b-instruct"
+		or "gemini-3.1-flash-lite-preview"
 	)
-	ollama_api_key = (frappe.conf.get("ollama_api_key") or "").strip()
 
-	# 标准 Ollama chat endpoint：base/api/chat
-	base_url = ollama_server_url.rstrip("/")
-	if base_url.endswith("/api"):
-		endpoint = f"{base_url}/chat"
-	else:
-		endpoint = f"{base_url}/api/chat"
+	is_gemini = "gemini" in ai_model.lower()
 
-	prompt_keys = "费用日期、名称、供应商、单据类型、金额、总额、数量、单价、单位。"
-	prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、供应商、单据类型、单位为字符串。"
+	prompt_keys = "费用日期、名称、单据类型、金额、总额、数量、单价、单位。"
+	prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、单据类型、单位为字符串。"
 	category_instruction = ""
 	if category_hierarchy:
-		prompt_keys = "费用日期、名称、供应商、单据类型、报销类型、金额、总额、数量、单价、单位。"
-		prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、供应商、单据类型、报销类型、单位为字符串。"
+		prompt_keys = "费用日期、名称、单据类型、报销类型、金额、总额、数量、单价、单位。"
+		prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、单据类型、报销类型、单位为字符串。"
 		category_instruction = (
 			f"\n【分类层级参考】\n{category_hierarchy}\n\n"
 			"【分类要求】你必须根据票据内容，从上述层级结构中选择最匹配的一项作为「报销类型」，原样返回类型名，不得自造新类型。\n"
@@ -1005,56 +994,100 @@ def recognize_receipt_image(**kwargs):
 		"请识别这张报销单据照片，并仅返回一个 JSON 对象（不要 markdown，不要代码块）。\n"
 		f"【强制】JSON 的键名必须全部使用中文，且只能使用下列键（不要出现英文键名）：\n{prompt_keys}\n"
 		f"{prompt_value_note}\n"
+		"【识别顺序要求】请严格分两步执行：\n"
+		"第 1 步先识别票面属性：单据类型、费用日期、总额。\n"
+		"第 2 步再识别内容明细：单位、数量、单价、金额。\n"
+		"若明细有多行，请按行写入「明细列表」数组；票面属性可在顶层给出，并在每行中按需补充。\n"
 		"如果单据里有多个可分开的项目，请额外返回「明细列表」，其值为数组；数组中的每一项都使用同一套中文键。\n"
 		"如果只有一个项目，可以不返回「明细列表」，或者返回只有一项的数组。\n"
-		"请优先识别项目名称、数量、单价、金额、总额、日期、供应商和单据类型。\n"
+		"请优先保证单据类型、日期、总额准确，其次再补全单位、数量、单价、金额与名称。\n"
 		"请尽量从票面读取「数量」「单价」；若只有「金额」和「数量」而没有「单价」，用金额÷数量推算「单价」（保留合理小数）。\n"
 		"若只有「金额」和「单价」而没有「数量」，用金额÷单价推算「数量」。\n"
 		"「单位」填计量单位（如次、个、天、公里、小时）；认不出时数量填 1，单价或金额可填 0，说明可填空字符串。"
 		f"{category_instruction}"
 	)
 
-	payload = {
-		"model": ollama_model,
-		"stream": False,
-		"options": {"temperature": 0.1},
-		"messages": [{"role": "user", "content": prompt, "images": [image_base64]}],
-	}
+	if is_gemini:
+		# Gemini API 逻辑
+		api_key = (frappe.conf.get("gemini_api_key") or "").strip()
+		if not api_key:
+			# 回退尝试读取本地文件 (仅用于临时测试，生产环境建议用 site_config)
+			try:
+				with open(".gemini_key", "r") as f:
+					api_key = f.read().strip()
+			except:
+				pass
+		
+		if not api_key:
+			frappe.throw("Gemini 识别失败：未配置 gemini_api_key。")
 
-	headers = {"Content-Type": "application/json"}
-	if ollama_api_key:
-		headers["Authorization"] = f"Bearer {ollama_api_key}"
+		# 移除 Base64 前缀
+		if "," in image_base64:
+			pure_base64 = image_base64.split(",")[1]
+		else:
+			pure_base64 = image_base64
 
-	try:
-		response = http_requests.post(endpoint, json=payload, headers=headers, timeout=120)
-	except RequestException as exc:
-		frappe.throw(
-			f"无法连接到 Ollama 服务（{ollama_server_url}）。"
-			f"请检查网络连通性，以及 site_config.json 中的 ollama_server_url / ollama_api_key 配置。"
-			f"错误详情：{exc}"
-		)
-
-	if response.status_code >= 400:
-		err_text = response.text[:500]
-		frappe.log_error(
-			message=f"Ollama API Error\nURL: {endpoint}\nStatus: {response.status_code}\nResponse: {err_text}",
-			title="Ollama Receipt Recognition Failure",
-		)
-		msg = f"Ollama 服务返回错误（{response.status_code}）"
+		endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{ai_model}:generateContent?key={api_key}"
+		payload = {
+			"contents": [
+				{
+					"parts": [
+						{"text": prompt},
+						{"inline_data": {"mime_type": "image/jpeg", "data": pure_base64}}
+					]
+				}
+			],
+			"generationConfig": {
+				"temperature": 0.1,
+				"response_mime_type": "application/json"
+			}
+		}
+		
 		try:
-			err_data = response.json()
-			if isinstance(err_data, dict) and err_data.get("error"):
-				msg += f"：{err_data['error']}"
-		except Exception:
-			msg += f"：{err_text[:100]}"
-		frappe.throw(msg)
+			response = http_requests.post(endpoint, json=payload, timeout=120)
+			response.raise_for_status()
+			res_data = response.json()
+			
+			# 提取回复内容
+			try:
+				content = res_data["candidates"][0]["content"]["parts"][0]["text"]
+				return json.loads(content)
+			except (KeyError, IndexError, ValueError) as e:
+				frappe.log_error(f"Gemini Parsing Error: {e}\nRaw: {res_data}", "Receipt recognition Failure")
+				frappe.throw("Gemini 返回内容解析失败")
 
-	raw_response = response.json()
-	frappe.log_error(
-		message=f"OCR Raw Response:\n{raw_response}",
-		title="Receipt OCR Debug"
-	)
-	return raw_response
+		except RequestException as exc:
+			frappe.throw(f"连接 Gemini 服务失败：{exc}")
+
+	else:
+		# 原有 Ollama 逻辑
+		ollama_server_url = (
+			(server_url or "").strip()
+			or (frappe.conf.get("ollama_server_url") or "").strip()
+			or "https://ollama.com/api"
+		)
+		ollama_api_key = (frappe.conf.get("ollama_api_key") or "").strip()
+
+		base_url = ollama_server_url.rstrip("/")
+		endpoint = f"{base_url}/chat" if base_url.endswith("/api") else f"{base_url}/api/chat"
+
+		payload = {
+			"model": ai_model,
+			"stream": False,
+			"options": {"temperature": 0.1},
+			"messages": [{"role": "user", "content": prompt, "images": [image_base64]}],
+		}
+
+		headers = {"Content-Type": "application/json"}
+		if ollama_api_key:
+			headers["Authorization"] = f"Bearer {ollama_api_key}"
+
+		try:
+			response = http_requests.post(endpoint, json=payload, headers=headers, timeout=120)
+			response.raise_for_status()
+			return response.json()
+		except RequestException as exc:
+			frappe.throw(f"无法连接到 Ollama 服务（{ollama_server_url}）：{exc}")
 
 
 @frappe.whitelist()

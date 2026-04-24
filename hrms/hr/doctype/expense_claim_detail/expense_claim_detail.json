@@ -10,7 +10,6 @@
   "expense_type",
   "default_account",
   "custom_receipt_item_name",
-  "custom_receipt_vendor",
   "custom_receipt_type",
   "custom_receipt_total_amount",
   "custom_receipt_index",
@@ -84,13 +83,6 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "票据名称",
-   "no_copy": 1
-  },
-  {
-   "fieldname": "custom_receipt_vendor",
-   "fieldtype": "Data",
-   "hidden": 1,
-   "label": "供应商",
    "no_copy": 1
   },
   {
