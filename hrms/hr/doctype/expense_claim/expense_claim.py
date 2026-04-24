@@ -1225,6 +1225,7 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 	type_category_map = get_expense_claim_type_category_map(claim.company)
 	hierarchy_text = _build_expense_type_hierarchy(allowed_types, type_category_map)
 	changed = False
+	classification_succeeded = False
 
 	for row in expenses:
 		current_type = str(getattr(row, "expense_type", "") or "").strip()
@@ -1246,6 +1247,7 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 		predicted_type = response.get("报销类型")
 		if not predicted_type or predicted_type == "无法识别":
 			continue
+		classification_succeeded = True
 			
 		if predicted_type in allowed_types and current_type != predicted_type:
 			row.expense_type = predicted_type
@@ -1255,6 +1257,9 @@ def classify_expense_claim_categories(claim_name: str) -> None:
 		claim.set_expense_account(validate=True)
 		claim.calculate_total_amount()
 		claim.calculate_taxes()
+
+	if not classification_succeeded:
+		return
 
 	claim.custom_ai_category_classified_on = frappe.utils.now_datetime()
 	claim.flags.skip_ai_category_classification = True

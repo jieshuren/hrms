@@ -1177,3 +1177,115 @@ def withdraw_expense_claim_to_draft(name: str):
 	frappe.db.commit()
 
 	return frappe.get_doc("Expense Claim", name).as_dict()
+
+
+@frappe.whitelist(methods=["POST"])
+def update_expense_claim_detail_type(claim_name: str, detail_name: str, expense_type: str) -> dict:
+	"""财务审核前，允许财务审批人修正明细费用分类。"""
+	claim_name = (claim_name or "").strip()
+	detail_name = (detail_name or "").strip()
+	expense_type = (expense_type or "").strip()
+	if not claim_name or not detail_name or not expense_type:
+		frappe.throw("参数不完整")
+
+	claim = frappe.get_doc("Expense Claim", claim_name)
+	claim.check_permission("write")
+	if getattr(claim, "docstatus", 0) != 0:
+		frappe.throw("仅未提交单据允许修改分类")
+	if (getattr(claim, "workflow_state", "") or "").strip() != "Pending Finance Approval":
+		frappe.throw("仅待财务审核阶段允许修改分类")
+	if "Finance Approver" not in frappe.get_roles(frappe.session.user):
+		frappe.throw("仅财务审批人允许修改分类")
+	if not frappe.db.exists("Expense Claim Type", expense_type):
+		frappe.throw("费用分类不存在")
+
+	target_row = None
+	for row in claim.get("expenses") or []:
+		if row.name == detail_name:
+			target_row = row
+			break
+	if not target_row:
+		frappe.throw("未找到对应的报销明细")
+
+	target_row.expense_type = expense_type
+	target_row.default_account = None
+	claim.set_expense_account(validate=False)
+	claim.calculate_total_amount()
+	claim.calculate_taxes()
+	claim.flags.skip_ai_category_classification = True
+	claim.save()
+	claim.publish_update()
+
+	return {"name": claim.name, "detail_name": detail_name, "expense_type": expense_type}
+
+
+@frappe.whitelist(methods=["POST"])
+def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str) -> dict:
+	"""财务审核前，对单条报销明细执行 AI 重新分类。"""
+	claim_name = (claim_name or "").strip()
+	detail_name = (detail_name or "").strip()
+	if not claim_name or not detail_name:
+		frappe.throw("参数不完整")
+
+	claim = frappe.get_doc("Expense Claim", claim_name)
+	claim.check_permission("write")
+	if getattr(claim, "docstatus", 0) != 0:
+		frappe.throw("仅未提交单据允许重新分类")
+	if (getattr(claim, "workflow_state", "") or "").strip() != "Pending Finance Approval":
+		frappe.throw("仅待财务审核阶段允许重新分类")
+	if "Finance Approver" not in frappe.get_roles(frappe.session.user):
+		frappe.throw("仅财务审批人允许重新分类")
+
+	target_row = None
+	for row in claim.get("expenses") or []:
+		if row.name == detail_name:
+			target_row = row
+			break
+	if not target_row:
+		frappe.throw("未找到对应的报销明细")
+
+	allowed_types = [row.name for row in frappe.get_all("Expense Claim Type", fields=["name"])]
+	if not allowed_types:
+		frappe.throw("未配置报销分类")
+
+	type_category_map = get_expense_claim_type_category_map(claim.company)
+	grouped: dict[str, list[str]] = {}
+	for expense_type in allowed_types:
+		category = type_category_map.get(expense_type) or "无法识别"
+		grouped.setdefault(category, []).append(expense_type)
+	if "无法识别" not in grouped:
+		grouped["无法识别"] = ["无法识别"]
+	elif "无法识别" not in grouped["无法识别"]:
+		grouped["无法识别"].insert(0, "无法识别")
+
+	lines = ["【可选报销类型层级结构】"]
+	for category, types in grouped.items():
+		lines.append(f"- {category}:")
+		for expense_type in types:
+			lines.append(f"  - {expense_type}")
+	hierarchy_text = "\n".join(lines)
+
+	text_to_classify = f"单据名称: {target_row.custom_receipt_item_name or ''}, 说明: {target_row.description or ''}"
+	if not text_to_classify.replace("单据名称: , 说明: ", "").strip():
+		frappe.throw("该条明细缺少可用于分类的文本内容")
+
+	response = classify_expense_text(
+		text_content=text_to_classify,
+		category_hierarchy=hierarchy_text,
+	)
+	predicted_type = str((response or {}).get("报销类型") or "").strip()
+	if not predicted_type or predicted_type == "无法识别":
+		frappe.throw("AI 未识别出有效分类，请手动选择")
+	if predicted_type not in allowed_types:
+		frappe.throw("AI 返回的分类不在可选范围内，请手动选择")
+
+	target_row.expense_type = predicted_type
+	target_row.default_account = None
+	claim.set_expense_account(validate=False)
+	claim.calculate_total_amount()
+	claim.calculate_taxes()
+	claim.flags.skip_ai_category_classification = True
+	claim.save()
+	claim.publish_update()
+
+	return {"name": claim.name, "detail_name": detail_name, "expense_type": predicted_type}
