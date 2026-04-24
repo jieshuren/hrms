@@ -57,8 +57,7 @@
    "reqd": 1,
    "width": "150px",
    "bold": 1,
-   "columns": 3,
-   "description": "AI 根据单据内容自动分类。若不准确，请财务人员手动点击修正。"
+   "columns": 3
   },
   {
    "depends_on": "expense_type",
