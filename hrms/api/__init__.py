@@ -802,6 +802,11 @@ def get_expense_claim_type_category_map(company: str | None = None) -> dict[str,
 
 	mapping: dict[str, str] = {}
 	for row in types:
+		type_name = (row.name or "").strip()
+		# 报销类型若本身就是「无法识别」，固定放到同名大类，避免混入主营业务成本等分组。
+		if type_name == "无法识别":
+			mapping[row.name] = "无法识别"
+			continue
 		account_name = account_by_type.get(row.name)
 		if not account_name:
 			mapping[row.name] = "无法识别"
@@ -1466,7 +1471,11 @@ def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str
 	if not target_row:
 		frappe.throw("未找到对应的报销明细")
 
-	allowed_types = [row.name for row in frappe.get_all("Expense Claim Type", fields=["name"])]
+	allowed_types = [
+		row.name
+		for row in frappe.get_all("Expense Claim Type", fields=["name"])
+		if (row.name or "").strip() != "无法识别"
+	]
 	if not allowed_types:
 		frappe.throw("未配置报销分类")
 
@@ -1475,10 +1484,6 @@ def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str
 	for expense_type in allowed_types:
 		category = type_category_map.get(expense_type) or "无法识别"
 		grouped.setdefault(category, []).append(expense_type)
-	if "无法识别" not in grouped:
-		grouped["无法识别"] = ["无法识别"]
-	elif "无法识别" not in grouped["无法识别"]:
-		grouped["无法识别"].insert(0, "无法识别")
 
 	lines = ["【可选报销类型层级结构】"]
 	for category, types in grouped.items():
