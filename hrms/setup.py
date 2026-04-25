@@ -336,6 +336,7 @@ def make_fixtures():
 		{"doctype": "Expense Claim Type", "name": _("Food"), "expense_type": _("Food")},
 		{"doctype": "Expense Claim Type", "name": _("Medical"), "expense_type": _("Medical")},
 		{"doctype": "Expense Claim Type", "name": _("Others"), "expense_type": _("Others")},
+		{"doctype": "Expense Claim Type", "name": _("Uncategorized"), "expense_type": _("Uncategorized")},
 		{"doctype": "Expense Claim Type", "name": _("Travel"), "expense_type": _("Travel")},
 		# vehicle service item
 		{"doctype": "Vehicle Service Item", "service_item": "Brake Oil"},

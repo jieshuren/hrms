@@ -1,9 +1,13 @@
+import base64
+import mimetypes
+import os
+
 import frappe
 from frappe import _
 from frappe.model import get_permitted_fields
 from frappe.model.workflow import get_workflow_name
 from frappe.query_builder import Order
-from frappe.utils import add_days, date_diff, getdate, strip_html
+from frappe.utils import add_days, cint, date_diff, getdate, strip_html
 
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
 
@@ -703,6 +707,77 @@ def get_company_cost_center_and_expense_account(company: str) -> dict:
 	)
 
 
+def _build_account_path_text_for_category(account_name: str | None) -> str:
+	"""自末级 Account 沿 parent_account 走到根，拼成一段文本，供 `parse_category` 匹配。
+
+	原实现只拼接了直接父级，若「管理费用」等只在更上层才出现，则匹配失败，全落到「无法识别」。
+	"""
+	if not (account_name or "").strip():
+		return ""
+
+	names: list[str] = []
+	current = str(account_name).strip()
+	seen: set[str] = set()
+	for _ in range(64):
+		if not current or current in seen:
+			break
+		seen.add(current)
+		row = frappe.db.get_value(
+			"Account",
+			current,
+			["parent_account", "account_name", "name"],
+			as_dict=True,
+		)
+		if not row:
+			break
+		label = (row.get("account_name") or row.get("name") or current).strip()
+		if label:
+			names.append(label)
+		parent = (row.get("parent_account") or "").strip()
+		if not parent:
+			break
+		current = parent
+
+	return " ".join(reversed(names))
+
+
+def _parse_expense_type_category_from_account_path(path: str | None) -> str:
+	"""与移动端 `ExpenseCategory` 一致的费用大类；无法归入下列标签时返回「无法识别」。"""
+	text = str(path or "")
+
+	# 资产/存货等（顺序：先具体类型）
+	if "固定资产" in text:
+		return "固定资产"
+	if "库存商品" in text:
+		return "库存商品"
+	if "财务费用" in text:
+		return "财务费用"
+	if "其他业务成本" in text:
+		return "其他业务成本"
+	# 销售费用单独成类（与「管理费用」并列），避免都挤在「无法识别」
+	if "销售费用" in text:
+		return "销售费用"
+	# 制造/施工/合同履约/生产成本 等常挂在「制造费用」或成本类下
+	if (
+		"主营业务成本" in text
+		or "制造费用" in text
+		or "生产成本" in text
+		or "合同履约成本" in text
+		or "工程施工" in text
+	):
+		return "主营业务成本"
+	# 管理费用、研发、长期摊销等
+	if (
+		"管理费用" in text
+		or "研发支出" in text
+		or "研究支出" in text
+		or "开发支出" in text
+		or "长期待摊" in text
+	):
+		return "管理费用"
+	return "无法识别"
+
+
 @frappe.whitelist()
 def get_expense_claim_type_category_map(company: str | None = None) -> dict[str, str]:
 	"""返回 Expense Claim Type 到费用大类的映射。
@@ -723,31 +798,7 @@ def get_expense_claim_type_category_map(company: str | None = None) -> dict[str,
 	)
 	account_by_type = {row.parent: row.default_account for row in accounts if row.parent}
 
-	account_names = list({name for name in account_by_type.values() if name})
-	account_details: dict[str, dict] = {}
-	if account_names:
-		rows = frappe.get_all(
-			"Account",
-			filters={"name": ["in", account_names]},
-			fields=["name", "account_name", "parent_account"],
-		)
-		account_details = {row.name: row for row in rows}
-
-	def parse_category(path: str | None) -> str:
-		text = str(path or "")
-		if "固定资产" in text:
-			return "固定资产"
-		if "库存商品" in text:
-			return "库存商品"
-		if "财务费用" in text:
-			return "财务费用"
-		if "主营业务成本" in text:
-			return "主营业务成本"
-		if "其他业务成本" in text:
-			return "其他业务成本"
-		if "管理费用" in text:
-			return "管理费用"
-		return "无法识别"
+	path_cache: dict[str, str] = {}
 
 	mapping: dict[str, str] = {}
 	for row in types:
@@ -755,14 +806,13 @@ def get_expense_claim_type_category_map(company: str | None = None) -> dict[str,
 		if not account_name:
 			mapping[row.name] = "无法识别"
 			continue
-
-		leaf = account_details.get(account_name)
-		if not leaf:
+		if not frappe.db.exists("Account", account_name):
 			mapping[row.name] = "无法识别"
 			continue
-
-		path = f"{leaf.get('parent_account') or ''} {leaf.get('account_name') or ''} {account_name}"
-		mapping[row.name] = parse_category(path)
+		if account_name not in path_cache:
+			path_cache[account_name] = _build_account_path_text_for_category(account_name)
+		path = path_cache[account_name]
+		mapping[row.name] = _parse_expense_type_category_from_account_path(path)
 
 	return mapping
 
@@ -793,6 +843,49 @@ def get_attachments(dt: str, dn: str):
 		filters={"attached_to_name": str(dn), "attached_to_doctype": dt},
 		order_by="creation asc",
 	)
+
+
+@frappe.whitelist()
+def get_file_content_base64(name: str) -> dict:
+	"""按「File」文档的 name 返回 base64 内容，供 App/小程序在 downloadFile 无法带 Cookie 时打开 PDF 等。
+
+	大小上限约 20MB，避免内存压力。
+	"""
+	limit = 20 * 1024 * 1024
+	name = (name or "").strip()
+	if not name:
+		frappe.throw(_("请提供附件 File 的 name"))
+	try:
+		file_doc = frappe.get_doc("File", name)
+	except Exception:
+		frappe.throw(_("附件不存在"))
+	if cint(getattr(file_doc, "is_folder", 0)):
+		frappe.throw(_("不是文件"))
+	if not frappe.has_permission("File", "read", doc=file_doc):
+		frappe.throw(_("无权访问该文件"))
+	# 远程/外链不读盘
+	if file_doc.is_remote_file:
+		return {
+			"is_remote": True,
+			"file_url": file_doc.file_url or "",
+			"file_name": file_doc.file_name or "file",
+		}
+	fpath = file_doc.get_full_path()
+	if not fpath or not os.path.exists(fpath):
+		frappe.throw(_("文件在服务器上不存在"))
+	fsize = os.path.getsize(fpath)
+	if fsize > limit:
+		frappe.throw(_("文件过大，请在电脑端打开"))
+	with open(fpath, "rb") as f:
+		raw = f.read()
+	mime, _ = mimetypes.guess_type(file_doc.file_name or "")
+	return {
+		"is_remote": False,
+		"file_name": file_doc.file_name or "file",
+		"mime": mime or "application/octet-stream",
+		"content_base64": base64.b64encode(raw).decode("ascii"),
+		"size": fsize,
+	}
 
 
 @frappe.whitelist()
@@ -1003,20 +1096,147 @@ def recognize_receipt_image(**kwargs):
 	"""
 	通过后端代理调用 AI 模型进行报销票据图片识别。
 	支持 Ollama 和 Google Gemini 两种后端。
+	图片通过 Base64 编码在 JSON body 中发送；PDF 请使用 recognize_receipt_file。
 	"""
-	import json
-	import requests as http_requests
-	from requests.exceptions import RequestException
-
 	image_base64 = kwargs.get("image_base64")
 	model = kwargs.get("model")
 	server_url = kwargs.get("server_url")
 	category_hierarchy = kwargs.get("category_hierarchy")
+	file_type = kwargs.get("file_type") or "image"
 
 	if not image_base64:
 		frappe.throw("识别请求失败：未收到图片数据 (image_base64)")
 
-	# 模型选择
+	return _do_recognize_receipt(image_base64, file_type, model, server_url, category_hierarchy)
+
+
+def _generate_pdf_thumbnail(file_data, width=300):
+	"""将 PDF 第一页渲染为 JPEG 缩略图，返回 base64 编码字符串。"""
+	import base64
+	import io
+
+	try:
+		import fitz
+	except ImportError:
+		frappe.log_error("PyMuPDF (fitz) 未安装，无法生成 PDF 缩略图", "PDF Thumbnail")
+		return ""
+
+	try:
+		doc = fitz.open(stream=file_data, filetype="pdf")
+		if not doc.page_count:
+			doc.close()
+			frappe.log_error("PDF 文件无页面", "PDF Thumbnail")
+			return ""
+		page = doc.load_page(0)
+		zoom = width / (page.rect.width or 612)
+		mat = fitz.Matrix(zoom, zoom)
+		pix = page.get_pixmap(matrix=mat)
+		img_bytes = pix.tobytes("jpeg")
+		doc.close()
+		thumbnail = base64.b64encode(img_bytes).decode("utf-8")
+		frappe.log_error(f"PDF 缩略图生成成功，base64 长度: {len(thumbnail)}", "PDF Thumbnail")
+		return thumbnail
+	except Exception as e:
+		frappe.log_error(f"PDF 缩略图生成失败: {e}", "PDF Thumbnail")
+		return ""
+
+
+@frappe.whitelist()
+def get_pdf_thumbnail(file_url):
+	"""根据已上传的 PDF 文件 URL 生成并返回第一页缩略图的 base64。"""
+	import base64
+
+	if not file_url:
+		frappe.throw("缺少 file_url 参数")
+
+	file_url = str(file_url).strip()
+	if file_url.startswith(("http://", "https://")):
+		import requests as http_requests
+		try:
+			resp = http_requests.get(file_url, timeout=15)
+			resp.raise_for_status()
+			file_data = resp.content
+		except Exception:
+			frappe.throw("无法下载文件")
+	else:
+		file_path = frappe.get_site_path("public", file_url.lstrip("/"))
+		if not os.path.exists(file_path):
+			private_path = frappe.get_site_path("private", file_url.lstrip("/"))
+			if os.path.exists(private_path):
+				file_path = private_path
+			else:
+				frappe.throw("文件不存在")
+		with open(file_path, "rb") as f:
+			file_data = f.read()
+
+	thumbnail = _generate_pdf_thumbnail(file_data)
+	if not thumbnail:
+		frappe.throw("无法生成 PDF 缩略图")
+	return {"thumbnail_base64": thumbnail}
+
+
+# Receipt File Recognition (upload-based, for large PDFs)
+@frappe.whitelist(methods=["POST"])
+def recognize_receipt_file(**kwargs):
+	"""
+	通过文件上传方式接收票据文件（主要支持 PDF），调用 AI 模型识别。
+	解决大文件通过 JSON POST 发送 Base64 时超出请求体限制的问题。
+	"""
+	import base64
+	import json
+
+	from frappe.handler import ALLOWED_MIMETYPES
+
+	file_type = kwargs.get("file_type") or "image"
+	model = kwargs.get("model")
+	server_url = kwargs.get("server_url")
+	category_hierarchy = kwargs.get("category_hierarchy")
+
+	uploaded = frappe.request.files.get("file")
+	if not uploaded:
+		frappe.throw("未收到文件")
+
+	filename = uploaded.filename or ""
+	content_type = uploaded.content_type or ""
+
+	if content_type and content_type not in ALLOWED_MIMETYPES:
+		frappe.throw(f"不支持的文件类型：{content_type}")
+
+	file_data = uploaded.stream.read()
+	if not file_data:
+		frappe.throw("文件内容为空")
+
+	pure_base64 = base64.b64encode(file_data).decode("utf-8")
+
+	if content_type == "application/pdf":
+		file_type = "pdf"
+
+	result = _do_recognize_receipt(pure_base64, file_type, model, server_url, category_hierarchy)
+
+	if file_type == "pdf":
+		thumbnail_base64 = _generate_pdf_thumbnail(file_data)
+		if isinstance(result, dict):
+			result["thumbnail_base64"] = thumbnail_base64 or ""
+		elif isinstance(result, str):
+			try:
+				parsed = json.loads(result)
+				parsed["thumbnail_base64"] = thumbnail_base64 or ""
+				result = parsed
+			except:
+				result = {"message": result, "thumbnail_base64": thumbnail_base64 or ""}
+
+	return result
+
+
+def _do_recognize_receipt(image_base64, file_type="image", model=None, server_url=None, category_hierarchy=None):
+	"""共用识别逻辑，被 recognize_receipt_image 和 recognize_receipt_file 调用。"""
+	import json
+	import requests as http_requests
+	from requests.exceptions import RequestException
+
+	if not image_base64:
+		frappe.throw("识别请求失败：未收到数据")
+
 	ai_model = (
 		(model or "").strip()
 		or (frappe.conf.get("ollama_model") or "").strip()
@@ -1039,8 +1259,11 @@ def recognize_receipt_image(**kwargs):
 			"分类模式下只返回一个 JSON 对象，不要返回「明细列表」数组。"
 		)
 
+	is_pdf = file_type == "pdf"
+	doc_word = "PDF 文件" if is_pdf else "照片"
+
 	prompt = (
-		"请识别这张报销单据照片，并仅返回一个 JSON 对象（不要 markdown，不要代码块）。\n"
+		f"请识别这张报销单据{doc_word}，并仅返回一个 JSON 对象（不要 markdown，不要代码块）。\n"
 		f"【强制】JSON 的键名必须全部使用中文，且只能使用下列键（不要出现英文键名）：\n{prompt_keys}\n"
 		f"{prompt_value_note}\n"
 		"【识别顺序要求】请严格分两步执行：\n"
@@ -1057,32 +1280,30 @@ def recognize_receipt_image(**kwargs):
 	)
 
 	if is_gemini:
-		# Gemini API 逻辑
 		api_key = (frappe.conf.get("gemini_api_key") or "").strip()
 		if not api_key:
-			# 回退尝试读取本地文件 (仅用于临时测试，生产环境建议用 site_config)
 			try:
 				with open(".gemini_key", "r") as f:
 					api_key = f.read().strip()
 			except:
 				pass
-		
+
 		if not api_key:
 			frappe.throw("Gemini 识别失败：未配置 gemini_api_key。")
 
-		# 移除 Base64 前缀
 		if "," in image_base64:
 			pure_base64 = image_base64.split(",")[1]
 		else:
 			pure_base64 = image_base64
 
 		endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{ai_model}:generateContent?key={api_key}"
+		mime_type = "application/pdf" if is_pdf else "image/jpeg"
 		payload = {
 			"contents": [
 				{
 					"parts": [
 						{"text": prompt},
-						{"inline_data": {"mime_type": "image/jpeg", "data": pure_base64}}
+						{"inline_data": {"mime_type": mime_type, "data": pure_base64}}
 					]
 				}
 			],
@@ -1091,13 +1312,12 @@ def recognize_receipt_image(**kwargs):
 				"response_mime_type": "application/json"
 			}
 		}
-		
+
 		try:
 			response = http_requests.post(endpoint, json=payload, timeout=120)
 			response.raise_for_status()
 			res_data = response.json()
-			
-			# 提取回复内容
+
 			try:
 				content = res_data["candidates"][0]["content"]["parts"][0]["text"]
 				return json.loads(content)
@@ -1109,7 +1329,9 @@ def recognize_receipt_image(**kwargs):
 			frappe.throw(f"连接 Gemini 服务失败：{exc}")
 
 	else:
-		# 原有 Ollama 逻辑
+		if is_pdf:
+			frappe.throw("Ollama 视觉模型不支持 PDF 文件识别，请使用 Gemini 模型或上传图片格式")
+
 		ollama_server_url = (
 			(server_url or "").strip()
 			or (frappe.conf.get("ollama_server_url") or "").strip()
