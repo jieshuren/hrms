@@ -784,40 +784,50 @@ def get_expense_claim_type_category_map(company: str | None = None) -> dict[str,
 
 	移动端需要这个接口把报销类型归到固定资产、管理费用等大类中。
 	"""
+	def row_value(row, key: str) -> str:
+		if isinstance(row, dict):
+			return row.get(key)
+		return getattr(row, key, None)
+
 	types = frappe.get_all("Expense Claim Type", fields=["name"])
 	if not types:
 		return {}
 
 	if not company:
-		return {row.name: "无法识别" for row in types}
+		return {row_value(row, "name"): "无法识别" for row in types if row_value(row, "name")}
 
 	accounts = frappe.get_all(
 		"Expense Claim Account",
 		filters={"company": company},
 		fields=["parent", "default_account"],
 	)
-	account_by_type = {row.parent: row.default_account for row in accounts if row.parent}
+	account_by_type = {
+		row_value(row, "parent"): row_value(row, "default_account")
+		for row in accounts
+		if row_value(row, "parent")
+	}
 
 	path_cache: dict[str, str] = {}
 
 	mapping: dict[str, str] = {}
 	for row in types:
-		type_name = (row.name or "").strip()
+		row_name = str(row_value(row, "name") or "").strip()
+		type_name = row_name
 		# 报销类型若本身就是「无法识别」，固定放到同名大类，避免混入主营业务成本等分组。
 		if type_name == "无法识别":
-			mapping[row.name] = "无法识别"
+			mapping[row_name] = "无法识别"
 			continue
-		account_name = account_by_type.get(row.name)
+		account_name = account_by_type.get(row_name)
 		if not account_name:
-			mapping[row.name] = "无法识别"
+			mapping[row_name] = "无法识别"
 			continue
 		if not frappe.db.exists("Account", account_name):
-			mapping[row.name] = "无法识别"
+			mapping[row_name] = "无法识别"
 			continue
 		if account_name not in path_cache:
 			path_cache[account_name] = _build_account_path_text_for_category(account_name)
 		path = path_cache[account_name]
-		mapping[row.name] = _parse_expense_type_category_from_account_path(path)
+		mapping[row_name] = _parse_expense_type_category_from_account_path(path)
 
 	return mapping
 

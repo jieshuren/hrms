@@ -15,17 +15,31 @@ class TestExpenseClaimAPI(FrappeTestCase):
 				return [{"name": "差旅费"}]
 			if doctype == "Expense Claim Account":
 				return [{"parent": "差旅费", "default_account": "Travel Expenses - _TC"}]
-			if doctype == "Account":
-				return [
-					{
-						"name": "Travel Expenses - _TC",
-						"account_name": "Travel Expenses",
-						"parent_account": "管理费用 - _TC",
-					}
-				]
+			if doctype == "Custom DocPerm":
+				return []
 			raise AssertionError(f"Unexpected doctype: {doctype}")
 
-		with patch.object(frappe, "get_all", side_effect=fake_get_all):
+		with (
+			patch.object(frappe, "get_all", side_effect=fake_get_all),
+			patch.object(
+				frappe.db,
+				"get_value",
+				side_effect=lambda doctype, name, *args, **kwargs: (
+					frappe._dict(
+						name="Travel Expenses - _TC",
+						account_name="Travel Expenses",
+						parent_account="管理费用 - _TC",
+					)
+					if name == "Travel Expenses - _TC"
+					else frappe._dict(
+						name="管理费用 - _TC",
+						account_name="管理费用",
+						parent_account="",
+					)
+				),
+			),
+			patch.object(frappe.db, "exists", return_value=True),
+		):
 			self.assertEqual(
 				get_expense_claim_type_category_map("华烁科技"),
 				{"差旅费": "管理费用"},
