@@ -359,6 +359,8 @@ def _apply_material_request_fields(doc, data: frappe._dict, items: list[frappe._
 	doc.transaction_date = getdate(data.get("transaction_date"))
 	doc.schedule_date = getdate(data.get("schedule_date"))
 	doc.set_warehouse = str(data.get("set_warehouse") or "").strip() or None
+	doc.buying_price_list = str(data.get("buying_price_list") or "").strip() or None
+	doc.from_warehouse = str(data.get("from_warehouse") or "").strip() or None
 	doc.set("items", [])
 	for item in items:
 		row = doc.append("items", {})
@@ -367,7 +369,9 @@ def _apply_material_request_fields(doc, data: frappe._dict, items: list[frappe._
 		row.item_code = str(item.get("item_code") or "").strip()
 		row.qty = flt(item.get("qty"))
 		row.uom = str(item.get("uom") or "").strip()
+		row.rate = flt(item.get("rate"))
 		row.schedule_date = getdate(item.get("schedule_date") or data.get("schedule_date"))
+		row.from_warehouse = str(item.get("from_warehouse") or data.get("from_warehouse") or "").strip() or None
 		row.warehouse = str(item.get("warehouse") or data.get("set_warehouse") or "").strip() or None
 		row.project = str(item.get("project") or "").strip() or None
 		row.description = str(item.get("description") or "").strip() or None
@@ -941,3 +945,22 @@ def update_mobile_material_request(payload: str | dict | None = None, **kwargs) 
 		"name": doc.name,
 		"docstatus": cint(doc.docstatus),
 	}
+
+@frappe.whitelist()
+def get_mobile_price_lists() -> list[dict]:
+        return frappe.get_all(
+                "Price List",
+                fields=["name", "enabled", "buying", "selling", "currency"],
+                filters={"enabled": 1, "buying": 1},
+                order_by="name asc"
+        )
+
+@frappe.whitelist()
+def get_mobile_item_price(item_code: str, price_list: str) -> dict:
+        price = frappe.db.get_value(
+                "Item Price",
+                {"item_code": item_code, "price_list": price_list},
+                ["price_list_rate", "currency"],
+                as_dict=True
+        )
+        return price or {"price_list_rate": 0, "currency": ""}
