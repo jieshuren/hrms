@@ -354,7 +354,7 @@ def _validate_material_request_payload(data: frappe._dict) -> list[frappe._dict]
 
 
 def _apply_material_request_fields(doc, data: frappe._dict, items: list[frappe._dict]) -> None:
-	doc.material_request_type = "Purchase"
+	doc.material_request_type = str(data.get("material_request_type") or "Purchase").strip()
 	doc.company = str(data.get("company") or "").strip()
 	doc.transaction_date = getdate(data.get("transaction_date"))
 	doc.schedule_date = getdate(data.get("schedule_date"))
@@ -668,7 +668,7 @@ def get_mobile_material_request_queue(limit: int | None = 50) -> list[dict]:
 			"creation",
 		],
 		filters={
-			"material_request_type": "Purchase",
+			"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
 			"docstatus": ("!=", 2),
 			"status": ("not in", ["Stopped", "Cancelled"]),
 		},
@@ -696,7 +696,7 @@ def get_mobile_procurement_overview() -> dict:
 			"creation",
 		],
 		filters={
-			"material_request_type": "Purchase",
+			"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
 			"docstatus": ("!=", 2),
 			"owner": frappe.session.user,
 		},
@@ -708,7 +708,7 @@ def get_mobile_procurement_overview() -> dict:
 	if _can_manage_procurement():
 		stage_counts = {
 			"material_request": frappe.db.count(
-				"Material Request", {"material_request_type": "Purchase", "docstatus": ("!=", 2)}
+				"Material Request", {"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]), "docstatus": ("!=", 2)}
 			),
 			"request_for_quotation": frappe.db.count("Request for Quotation", {"docstatus": ("!=", 2)}),
 			"supplier_quotation": frappe.db.count("Supplier Quotation", {"docstatus": ("!=", 2)}),
@@ -754,7 +754,7 @@ def get_mobile_procurement_overview() -> dict:
 			"material_request": frappe.db.count(
 				"Material Request",
 				{
-					"material_request_type": "Purchase",
+					"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
 					"docstatus": ("!=", 2),
 					"owner": frappe.session.user,
 				},
