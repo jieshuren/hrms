@@ -262,7 +262,7 @@ def get_filters(
 ) -> dict:
 	filters = frappe._dict()
 	if for_approval:
-		filters.docstatus = 0
+		filters.docstatus = ("in", [0, 1])
 		filters.employee = ("!=", employee)
 
 		if workflow := get_workflow(doctype):
@@ -1526,3 +1526,44 @@ def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str
 	claim.publish_update()
 
 	return {"name": claim.name, "detail_name": detail_name, "expense_type": predicted_type}
+
+@frappe.whitelist(methods=["POST"])
+def confirm_expense_claim_payment(claim_name: str, mop: str, advances: list | str, action: str) -> dict:
+	"""出纳确认付款：一次性更新付款方式、预付款抵扣并执行工作流动作。"""
+	if isinstance(advances, str):
+		import json
+		advances = json.loads(advances)
+
+	doc = frappe.get_doc("Expense Claim", claim_name)
+	
+	# 权限校验
+	user_roles = frappe.get_roles(frappe.session.user)
+	if "Cashier" not in user_roles and "Administrator" not in user_roles and "Finance Approver" not in user_roles:
+		frappe.throw("只有出纳或财务人员允许执行此操作", frappe.PermissionError)
+
+	# 1. 更新付款方式相关字段
+	doc.custom_cashier_mode_of_payment = mop
+	doc.custom_cashier_user = frappe.session.user
+	doc.custom_paid_on = frappe.utils.now_datetime()
+	
+	# 2. 更新预付款子表
+	# 允许在提交后更新预付款抵扣额（出纳确认时可能需要微调）
+	doc.set("advances", [])
+	for row in advances:
+		if not row.get("employee_advance"):
+			continue
+		doc.append("advances", {
+			"employee_advance": row.get("employee_advance"),
+			"allocated_amount": row.get("allocated_amount"),
+			"advance_amount": row.get("advance_amount"),
+			"unclaimed_amount": row.get("unclaimed_amount")
+		})
+	
+	# 3. 执行工作流动作
+	# 绕过提交后的修改限制（针对预付款子表）
+	doc.flags.ignore_validate_update_after_submit = True
+	
+	from frappe.workflow.doctype.workflow_action.workflow_action import apply_workflow
+	apply_workflow(doc, action)
+	
+	return {"name": doc.name, "workflow_state": doc.workflow_state}
