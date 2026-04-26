@@ -701,10 +701,9 @@ def get_mobile_procurement_overview() -> dict:
 		],
 		filters={
 			"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
-			"docstatus": ("!=", 2),
 			"owner": frappe.session.user,
 		},
-		order_by="creation desc",
+		order_by="modified desc",
 		limit_page_length=10,
 	)
 	my_requests = _serialize_material_request_rows([frappe._dict(row) for row in my_rows])
@@ -907,7 +906,6 @@ def create_mobile_material_request(payload: str | dict | None = None, **kwargs) 
 	_apply_material_request_fields(doc, data, items)
 	doc.flags.ignore_permissions = True
 	doc.insert()
-	doc.submit()
 
 	return {
 		"name": doc.name,
@@ -939,7 +937,100 @@ def update_mobile_material_request(payload: str | dict | None = None, **kwargs) 
 	_apply_material_request_fields(doc, data, items)
 	doc.flags.ignore_permissions = True
 	doc.save()
-	doc.submit()
+
+	return {
+		"name": doc.name,
+		"docstatus": cint(doc.docstatus),
+	}
+
+
+@frappe.whitelist()
+def submit_mobile_material_request(name: str) -> dict:
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Material Request", name)
+	_ensure_material_request_access(doc)
+	if doc.owner != frappe.session.user:
+		frappe.throw(_("只有申请人本人可以提交物料申请"), frappe.PermissionError)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的物料申请可以提交"))
+
+	doc.flags.ignore_permissions = True
+
+	# Try to apply workflow action if available
+	workflow_name = None
+	try:
+		from frappe.model.workflow import get_workflow_name
+		workflow_name = get_workflow_name("Material Request")
+	except Exception:
+		pass
+
+	if workflow_name:
+		from frappe.model.workflow import apply_workflow, get_transitions_for_user
+
+		transitions = get_transitions_for_user("Material Request", doc.name)
+		submit_action = next(
+			(t.action for t in transitions if t.action.lower() in ["submit", "submit for approval", "提交", "确认"]),
+			None,
+		)
+		if submit_action:
+			try:
+				apply_workflow(doc, submit_action)
+				return {
+					"name": doc.name,
+					"docstatus": cint(doc.docstatus),
+					"workflow_applied": True,
+					"action": submit_action,
+				}
+			except Exception as e:
+				# If workflow application fails, log it and fall back to normal submit if docstatus is still 0
+				frappe.log_error(f"Workflow failed for {doc.name}: {str(e)}", "Mobile API Error")
+
+	# Fallback to normal submit
+	if cint(doc.docstatus) == 0:
+		doc.submit()
+
+	return {
+		"name": doc.name,
+		"docstatus": cint(doc.docstatus),
+	}
+
+
+@frappe.whitelist()
+def delete_mobile_material_request(name: str) -> dict:
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Material Request", name)
+	_ensure_material_request_access(doc)
+	if doc.owner != frappe.session.user:
+		frappe.throw(_("只有申请人本人可以删除物料申请"), frappe.PermissionError)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的物料申请可以删除"))
+
+	frappe.delete_doc("Material Request", name, ignore_permissions=True)
+
+	return {"name": name, "deleted": True}
+
+
+@frappe.whitelist()
+def cancel_mobile_material_request(name: str) -> dict:
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Material Request", name)
+	_ensure_material_request_access(doc)
+	if doc.owner != frappe.session.user:
+		frappe.throw(_("只有申请人本人可以取消物料申请"), frappe.PermissionError)
+	if cint(doc.docstatus) != 1:
+		frappe.throw(_("只有已提交的物料申请可以取消"))
+
+	doc.flags.ignore_permissions = True
+	doc.cancel()
 
 	return {
 		"name": doc.name,
