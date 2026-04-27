@@ -1231,19 +1231,30 @@ def _auto_create_payment_entry(doc) -> None:
 	from hrms.hr.doctype.expense_claim.expense_claim import get_outstanding_amount_for_claim
 
 	selected_mode = (getattr(doc, "custom_cashier_mode_of_payment", None) or "").strip()
-	selected_account = _resolve_mode_of_payment_account(selected_mode, doc.company) if selected_mode else None
-
 	if not selected_mode and doc.mode_of_payment:
-		selected_mode = doc.mode_of_payment
+	        selected_mode = doc.mode_of_payment
+
+	selected_account = None
+	if selected_mode:
+	        selected_account = _resolve_mode_of_payment_account(selected_mode, doc.company)
+
 	if not selected_account and doc.bank_or_cash_account:
-		selected_account = doc.bank_or_cash_account
+	        selected_account = doc.bank_or_cash_account
+
+	# 最终兜底：尝试获取公司默认银行/现金账户
+	if not selected_account:
+	        from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
+	        res = get_default_bank_cash_account(doc.company, "Bank")
+	        if not res:
+	                res = get_default_bank_cash_account(doc.company, "Cash")
+	        if res:
+	                selected_account = res.get("account")
 
 	if not selected_account:
-		frappe.throw(
-			"未能确定出纳付款账户。请在移动端重新选择付款方式（确保该 Mode of Payment 已在 "
-			"Company 下配置默认账户），或在 Company 设置中填写『默认银行账户 / 默认现金账户』。"
-		)
-
+	        frappe.throw(
+	                "未能确定出纳付款账户。请在移动端重新选择付款方式（确保该 Mode of Payment 已在 "
+	                "Company 下配置默认账户），或在 Company 设置中填写『默认银行账户 / 默认现金账户』。"
+	        )
 	outstanding_amount = get_outstanding_amount_for_claim(doc)
 	if outstanding_amount <= 0:
 		return

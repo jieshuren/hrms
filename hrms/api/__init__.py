@@ -1527,18 +1527,103 @@ def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str
 
 	return {"name": claim.name, "detail_name": detail_name, "expense_type": predicted_type}
 
+@frappe.whitelist()
+def sync_bank_accounts_to_mop():
+	"""根据会计科目表同步生成简洁中文名称的付款方式，并汉化现有项目。"""
+	company = frappe.db.get_single_value("Global Defaults", "default_company")
+	if not company:
+		return "未找到默认公司"
+
+	# 1. 汉化系统默认的常见付款方式
+	translations = {
+		"Wire Transfer": "银行转账",
+		"Cash": "现金支付",
+		"Credit Card": "信用卡",
+		"Check": "支票"
+	}
+	for old_name, new_name in translations.items():
+		if frappe.db.exists("Mode of Payment", old_name):
+			frappe.rename_doc("Mode of Payment", old_name, new_name, force=True, merge=True)
+
+	# 2. 从会计科目同步
+	bank_accounts = frappe.get_all("Account", 
+		filters={"account_type": ["in", ["Bank", "Cash"]], "is_group": 0, "company": company},
+		fields=["name", "account_type", "account_name"]
+	)
+
+	results = []
+	for acc in bank_accounts:
+		# 清洗名称：移除 "1001 - " 这种前缀，以及 " - 华烁" 这种公司后缀
+		raw_name = acc.account_name
+		clean_name = raw_name.split(" - ")[1] if " - " in raw_name else raw_name
+		clean_name = clean_name.replace(" - 华烁", "").strip()
+		
+		if not frappe.db.exists("Mode of Payment", clean_name):
+			doc = frappe.new_doc("Mode of Payment")
+			doc.mode_of_payment = clean_name
+			doc.type = acc.account_type
+			doc.enabled = 1
+			doc.insert(ignore_permissions=True)
+		
+		mop_doc = frappe.get_doc("Mode of Payment", clean_name)
+		mop_doc.set("accounts", [])
+		mop_doc.append("accounts", {
+			"company": company,
+			"default_account": acc.name
+		})
+		mop_doc.save(ignore_permissions=True)
+		results.append(f"{clean_name} -> {acc.name}")
+
+	frappe.db.commit()
+	return results
+
+@frappe.whitelist()
+def get_cashier_modes_of_payment(company: str):
+	"""获取供出纳使用的付款方式列表（带公司默认账户）。
+	解决移动端直接调用 frappe.client.get_list 导致的 403 权限问题。
+	"""
+	mops = frappe.get_all("Mode of Payment", 
+		filters={"enabled": 1}, 
+		fields=["name", "type"],
+		order_by="name asc"
+	)
+	
+	res = []
+	for mop in mops:
+		account = frappe.db.get_value("Mode of Payment Account", 
+			{"parent": mop.name, "company": company}, 
+			"default_account"
+		)
+		res.append({
+			"name": mop.name,
+			"type": mop.type,
+			"account": account or ""
+		})
+	return res
+
 @frappe.whitelist(methods=["POST"])
-def confirm_expense_claim_payment(claim_name: str, mop: str, advances: list | str, action: str) -> dict:
+def confirm_expense_claim_payment(claim_name: str, mop: str, advances: list | str = None, action: str = None) -> dict:
 	"""出纳确认付款：一次性更新付款方式、预付款抵扣并执行工作流动作。"""
-	if isinstance(advances, str):
+	if isinstance(advances, str) and advances.strip():
 		import json
-		advances = json.loads(advances)
+		try:
+			advances = json.loads(advances)
+		except Exception:
+			advances = []
+	
+	if not advances or not isinstance(advances, list):
+		advances = []
 
 	doc = frappe.get_doc("Expense Claim", claim_name)
 	
 	# 权限校验
 	user_roles = frappe.get_roles(frappe.session.user)
-	if "Cashier" not in user_roles and "Administrator" not in user_roles and "Finance Approver" not in user_roles:
+	allowed_roles = ["Cashier", "Administrator", "Finance Approver", "出纳", "财务人员", "财务审核"]
+	
+	has_permission = any(role in user_roles for role in allowed_roles)
+	
+	if not has_permission:
+		frappe.logger().warning(f"Permission Denied for {frappe.session.user}: Roles found {user_roles}")
 		frappe.throw("只有出纳或财务人员允许执行此操作", frappe.PermissionError)
 
 	# 1. 更新付款方式相关字段
