@@ -2,10 +2,30 @@
 # For license information, please see license.txt
 import frappe
 from frappe import bold
+from frappe.utils import strip_html
 
 
 class PWANotificationsMixin:
 	"""Mixin class for managing PWA updates"""
+
+	def _get_notification_subject(self) -> str:
+		"""Notification title shown in PWA cards."""
+		if self.doctype != "Expense Claim":
+			return f"{self.doctype} {self.name}"
+
+		# Prefer explicit remark first, then the first non-empty expense detail.
+		if self.get("remark"):
+			return self.remark.strip()
+
+		for row in self.get("expenses") or []:
+			description = strip_html((row.get("description") or "")).strip()
+			if description:
+				return description
+			expense_type = (row.get("expense_type") or "").strip()
+			if expense_type:
+				return expense_type
+
+		return self.doctype
 
 	def notify_approval_status(self):
 		"""Send Leave Application, Expense Claim & Shift Request Approval status notification - to employees"""
@@ -24,7 +44,11 @@ class PWANotificationsMixin:
 			notification.from_user = from_user
 			notification.to_user = to_user
 
-			notification.message = f"{bold('Your')} {bold(self.doctype)} {self.name} has been {bold(status)} by {bold(from_user_name)}"
+			subject = self._get_notification_subject()
+			notification.message = (
+				f"{bold('Your')} {bold(self.doctype)} {bold(subject)} "
+				f"has been {bold(status)} by {bold(from_user_name)}"
+			)
 
 			notification.reference_document_type = self.doctype
 			notification.reference_document_name = self.name
@@ -39,8 +63,9 @@ class PWANotificationsMixin:
 			return
 
 		notification = frappe.new_doc("PWA Notification")
+		subject = self._get_notification_subject()
 		notification.message = (
-			f"{bold(self.employee_name)} raised a new {bold(self.doctype)} for approval: {self.name}"
+			f"{bold(self.employee_name)} raised a new {bold(self.doctype)} for approval: {bold(subject)}"
 		)
 		notification.from_user = from_user
 		notification.to_user = to_user
