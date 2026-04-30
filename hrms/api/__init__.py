@@ -1348,10 +1348,10 @@ def _do_recognize_receipt(image_base64, file_type="image", model=None, server_ur
 			frappe.throw("Ollama 视觉模型不支持 PDF 文件识别，请使用 Gemini 模型或上传图片格式")
 
 		ollama_server_url = (
-			(server_url or "").strip()
-			or (frappe.conf.get("ollama_server_url") or "").strip()
-			or "https://ollama.com/api"
-		)
+		(server_url or "").strip()
+		or (frappe.conf.get("ollama_server_url") or "").strip()
+		or "https://ollama.com/api"
+	)
 		ollama_api_key = (frappe.conf.get("ollama_api_key") or "").strip()
 
 		base_url = ollama_server_url.rstrip("/")
