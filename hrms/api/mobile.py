@@ -420,14 +420,13 @@ def get_mobile_projects(department: str | None = None) -> list[dict]:
 
 @frappe.whitelist()
 def get_mobile_purchase_items() -> list[dict]:
-	return frappe.get_all(
-		"Item",
-		fields=["name", "item_name", "stock_uom", "purchase_uom"],
-		filters={"disabled": 0, "is_purchase_item": 1},
-		order_by="modified desc",
-		limit_page_length=300,
-	)
-
+        return frappe.get_all(
+                "Item",
+                fields=["name", "item_name", "stock_uom", "purchase_uom"],
+                filters={"disabled": 0, "is_purchase_item": 1},
+                order_by="modified desc",
+                limit_page_length=300,
+        )
 
 @frappe.whitelist()
 def get_mobile_departments() -> list[dict]:
@@ -1045,6 +1044,28 @@ def get_mobile_price_lists() -> list[dict]:
                 filters={"enabled": 1, "buying": 1},
                 order_by="name asc"
         )
+
+@frappe.whitelist()
+def get_mobile_item_warehouses(item_code: str) -> dict:
+        # 获取各仓库库存余额
+        balances = frappe.db.get_all(
+                "Bin",
+                filters={"item_code": item_code, "actual_qty": [">", 0]},
+                fields=["warehouse", "actual_qty"]
+        )
+        
+        # 获取默认仓库
+        default_warehouse = frappe.db.get_value(
+                "Item Default", 
+                {"parent": item_code}, 
+                "default_warehouse"
+        )
+        
+        return {
+                "balances": balances,
+                "default_warehouse": default_warehouse
+        }
+
 
 @frappe.whitelist()
 def get_mobile_item_price(item_code: str, price_list: str) -> dict:
