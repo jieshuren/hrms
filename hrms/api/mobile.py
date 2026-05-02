@@ -196,6 +196,10 @@ def _material_request_queue_label(row: frappe._dict) -> str:
 	docstatus = cint(row.get("docstatus"))
 	status = str(row.get("status") or "").strip()
 	per_ordered = flt(row.get("per_ordered"))
+	workflow_state = row.get("workflow_state")
+	if workflow_state and workflow_state not in {"Draft", "草稿"}:
+		return workflow_state
+
 	if docstatus == 0:
 		return "草稿待提交"
 	if status in {"Stopped", "Cancelled"}:
@@ -205,7 +209,6 @@ def _material_request_queue_label(row: frappe._dict) -> str:
 	if per_ordered > 0:
 		return "部分下单"
 	return "待采购"
-
 
 def _serialize_material_request_rows(rows: list[frappe._dict]) -> list[dict]:
 	if not rows:
@@ -666,6 +669,7 @@ def get_mobile_material_request_queue(limit: int | None = 50) -> list[dict]:
 			"material_request_type",
 			"owner",
 			"per_ordered",
+			"workflow_state",
 			"docstatus",
 			"modified",
 			"creation",
@@ -694,6 +698,7 @@ def get_mobile_procurement_overview() -> dict:
 			"material_request_type",
 			"owner",
 			"per_ordered",
+			"workflow_state",
 			"docstatus",
 			"modified",
 			"creation",
