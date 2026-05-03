@@ -1720,7 +1720,7 @@ def get_mobile_project_management_overview(project: str | None = None, limit: in
 	timesheets = frappe.get_list(
 		"Timesheet",
 		filters={"parent_project": project} if project else {},
-		fields=["name", "employee", "employee_name", "start_date", "end_date", "total_hours", "status", "workflow_state", "docstatus", "note", "parent_project"],
+		fields=["name", "employee", "employee_name", "start_date", "end_date", "total_hours", "status", "docstatus", "note", "parent_project"],
 		order_by="modified desc",
 		limit=100,
 		ignore_permissions=True,
