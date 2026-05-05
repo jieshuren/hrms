@@ -15,16 +15,16 @@ def before_tests():
 	if not frappe.get_list("Company"):
 		setup_complete(
 			{
-				"currency": "INR",
+				"currency": "CNY",
 				"full_name": "Test User",
 				"company_name": "_Test Company",
-				"timezone": "Asia/Kolkata",
+				"timezone": "Asia/Shanghai",
 				"company_abbr": "_TC",
 				"industry": "Manufacturing",
-				"country": "India",
+				"country": "China",
 				"fy_start_date": f"{year}-01-01",
 				"fy_end_date": f"{year}-12-31",
-				"language": "english",
+				"language": "zh",
 				"company_tagline": "Testing",
 				"email": "test@erpnext.com",
 				"password": "test",
@@ -94,8 +94,8 @@ def create_company(name: str = "_Test Company", is_group: 0 | 1 = 0, parent_comp
 		{
 			"doctype": "Company",
 			"company_name": name,
-			"default_currency": "INR",
-			"country": "India",
+			"default_currency": "CNY",
+			"country": "China",
 			"is_group": is_group,
 			"parent_company": parent_company,
 		}

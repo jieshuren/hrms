@@ -239,10 +239,29 @@ def _serialize_material_request_rows(rows: list[frappe._dict]) -> list[dict]:
 				"item_count": len(items),
 				"qty_total": sum(flt(item.get("qty")) for item in items),
 				"per_ordered": flt(row.get("per_ordered")),
+				"workflow_state": row.get("workflow_state") or "",
 				"workflow_label": _material_request_queue_label(row),
 			}
 		)
 	return result
+
+
+def _get_mr_list_fields() -> list[str]:
+	fields = [
+		"name",
+		"transaction_date",
+		"schedule_date",
+		"status",
+		"material_request_type",
+		"owner",
+		"per_ordered",
+		"docstatus",
+		"modified",
+		"creation",
+	]
+	if frappe.get_meta("Material Request").has_field("workflow_state"):
+		fields.append("workflow_state")
+	return fields
 
 
 def _ensure_material_request_access(doc: frappe.model.document.Document) -> None:
@@ -340,7 +359,7 @@ def _validate_material_request_payload(data: frappe._dict) -> list[frappe._dict]
 
 	item_rows = frappe.get_all(
 		"Item",
-		fields=["name", "item_name", "stock_uom", "purchase_uom"],
+		fields=["name", "item_name", "stock_uom", "purchase_uom", "has_variants"],
 		filters={"name": ("in", item_codes)},
 		limit_page_length=500,
 	)
@@ -423,13 +442,13 @@ def get_mobile_projects(department: str | None = None) -> list[dict]:
 
 @frappe.whitelist()
 def get_mobile_purchase_items() -> list[dict]:
-        return frappe.get_all(
-                "Item",
-                fields=["name", "item_name", "stock_uom", "purchase_uom"],
-                filters={"disabled": 0, "is_purchase_item": 1},
-                order_by="modified desc",
-                limit_page_length=300,
-        )
+	return frappe.get_all(
+		"Item",
+		fields=["name", "item_name", "stock_uom", "purchase_uom"],
+		filters={"disabled": 0, "is_purchase_item": 1, "has_variants": 0},
+		order_by="modified desc",
+		limit_page_length=300,
+	)
 
 @frappe.whitelist()
 def get_mobile_departments() -> list[dict]:
@@ -661,19 +680,7 @@ def get_mobile_material_request_queue(limit: int | None = 50) -> list[dict]:
 
 	rows = frappe.get_all(
 		"Material Request",
-		fields=[
-			"name",
-			"transaction_date",
-			"schedule_date",
-			"status",
-			"material_request_type",
-			"owner",
-			"per_ordered",
-			"workflow_state",
-			"docstatus",
-			"modified",
-			"creation",
-		],
+		fields=_get_mr_list_fields(),
 		filters={
 			"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
 			"docstatus": ("!=", 2),
@@ -690,19 +697,7 @@ def get_mobile_procurement_overview() -> dict:
 	queue = get_mobile_material_request_queue(limit=20) if _can_manage_procurement() else []
 	my_rows = frappe.get_all(
 		"Material Request",
-		fields=[
-			"name",
-			"transaction_date",
-			"schedule_date",
-			"status",
-			"material_request_type",
-			"owner",
-			"per_ordered",
-			"workflow_state",
-			"docstatus",
-			"modified",
-			"creation",
-		],
+		fields=_get_mr_list_fields(),
 		filters={
 			"material_request_type": ("in", ["Purchase", "Material Transfer", "Material Issue"]),
 			"owner": frappe.session.user,
@@ -801,6 +796,7 @@ def get_mobile_material_request_detail(name: str) -> dict:
 	result["_employee_name"] = employee.get("employee_name") if employee else ""
 	result["_department_name"] = employee.get("department") if employee else ""
 	result["can_edit"] = bool(doc.owner == frappe.session.user and cint(doc.docstatus) == 0)
+	result["workflow_actions"] = _get_material_request_workflow_actions(doc.name)
 
 	rfq_names = _get_child_parent_names("Request for Quotation Item", "material_request", doc.name)
 	supplier_quote_names = _get_child_parent_names("Supplier Quotation Item", "material_request", doc.name)
@@ -898,6 +894,28 @@ def get_mobile_material_request_detail(name: str) -> dict:
 		"payment_entry": len(payment_entries),
 	}
 	return result
+
+
+def _get_material_request_workflow_actions(name: str) -> list[dict]:
+	rows = frappe.get_all(
+		"Workflow Action",
+		fields=[
+			"name",
+			"status",
+			"workflow_state",
+			"completed_by",
+			"completed_by_role",
+			"creation",
+			"modified",
+		],
+		filters={
+			"reference_doctype": "Material Request",
+			"reference_name": name,
+		},
+		order_by="creation asc",
+		limit_page_length=100,
+	)
+	return [dict(row) for row in rows]
 
 
 @frappe.whitelist()
@@ -1039,6 +1057,63 @@ def cancel_mobile_material_request(name: str) -> dict:
 	return {
 		"name": doc.name,
 		"docstatus": cint(doc.docstatus),
+	}
+
+
+@frappe.whitelist()
+def reset_mobile_material_request(name: str) -> dict:
+	"""将已审批的物料申请回退到草稿状态（取消、删除并重建）"""
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Material Request", name)
+	_ensure_material_request_access(doc)
+	if doc.owner != frappe.session.user:
+		frappe.throw(_("只有申请人本人可以回退物料申请"), frappe.PermissionError)
+	if cint(doc.docstatus) != 1:
+		frappe.throw(_("只有已提交的物料申请可以回退"))
+
+	# 保存单据数据用于重建
+	snapshot = {
+		"company": doc.company,
+		"transaction_date": doc.transaction_date,
+		"schedule_date": doc.schedule_date,
+		"material_request_type": doc.material_request_type,
+		"buying_price_list": doc.get("buying_price_list"),
+		"from_warehouse": doc.get("from_warehouse"),
+		"set_warehouse": doc.get("set_warehouse"),
+		"items": [
+			{
+				"item_code": item.item_code,
+				"qty": item.qty,
+				"rate": item.rate,
+				"uom": item.uom,
+				"schedule_date": item.schedule_date,
+				"from_warehouse": item.from_warehouse,
+				"warehouse": item.warehouse,
+				"project": item.project,
+				"description": item.description,
+			}
+			for item in doc.items
+		],
+	}
+
+	# 取消并删除原单据
+	doc.flags.ignore_permissions = True
+	doc.cancel()
+	frappe.delete_doc("Material Request", name, ignore_permissions=True)
+
+	# 重建草稿状态单据
+	new_doc = frappe.new_doc("Material Request")
+	_apply_material_request_fields(new_doc, snapshot, snapshot["items"])
+	new_doc.flags.ignore_permissions = True
+	new_doc.insert()
+
+	return {
+		"name": new_doc.name,
+		"docstatus": cint(new_doc.docstatus),
+		"original_name": name,
 	}
 
 @frappe.whitelist()

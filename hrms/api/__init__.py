@@ -1578,7 +1578,15 @@ def sync_bank_accounts_to_mop():
 	return results
 
 
-		filters={"enabled": 1}, 
+@frappe.whitelist()
+def get_cashier_modes_of_payment(company: str | None = None) -> list[dict]:
+	"""获取出纳可用的付款方式及其关联科目。"""
+	if not company:
+		company = frappe.db.get_single_value("Global Defaults", "default_company")
+
+	mops = frappe.get_all(
+		"Mode of Payment",
+		filters={"enabled": 1},
 		fields=["name", "type"],
 		order_by="name asc"
 	)

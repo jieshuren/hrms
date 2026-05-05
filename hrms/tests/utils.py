@@ -52,7 +52,7 @@ class BootStrapTestData:
 				"date": "2016-01-01",
 				"exchange_rate": 60.0,
 				"from_currency": "USD",
-				"to_currency": "INR",
+				"to_currency": "CNY",
 				"for_buying": 1,
 				"for_selling": 0,
 			},
@@ -61,7 +61,7 @@ class BootStrapTestData:
 				"date": "2016-01-10",
 				"exchange_rate": 65.1,
 				"from_currency": "USD",
-				"to_currency": "INR",
+				"to_currency": "CNY",
 				"for_buying": 1,
 				"for_selling": 0,
 			},
@@ -70,7 +70,7 @@ class BootStrapTestData:
 				"date": "2016-01-30",
 				"exchange_rate": 62.9,
 				"from_currency": "USD",
-				"to_currency": "INR",
+				"to_currency": "CNY",
 				"for_buying": 1,
 				"for_selling": 1,
 			},
@@ -117,8 +117,8 @@ class BootStrapTestData:
 			{
 				"abbr": "_TC",
 				"company_name": "_Test Company",
-				"country": "India",
-				"default_currency": "INR",
+				"country": "China",
+				"default_currency": "CNY",
 				"doctype": "Company",
 				"chart_of_accounts": "Standard",
 			}
@@ -194,11 +194,13 @@ class BootStrapTestData:
 	def make_leave_allocations(self):
 		"""Create test leave applications"""
 		# Create test leave applications here
+		employee = self.get_test_employee("_Test Employee")
+		employee_1 = self.get_test_employee("_Test Employee 1")
 		records = [
 			{
 				"docstatus": 1,
 				"doctype": "Leave Allocation",
-				"employee": "_T-Employee-00001",
+				"employee": employee,
 				"from_date": "2013-01-01",
 				"to_date": "2019-12-31",
 				"leave_type": "_Test Leave Type",
@@ -207,7 +209,7 @@ class BootStrapTestData:
 			{
 				"docstatus": 1,
 				"doctype": "Leave Allocation",
-				"employee": "_T-Employee-00002",
+				"employee": employee_1,
 				"from_date": "2013-01-01",
 				"to_date": "2013-12-31",
 				"leave_type": "_Test Leave Type",
@@ -217,11 +219,13 @@ class BootStrapTestData:
 		self.make_records(["employee", "from_date", "to_date"], records)
 
 	def make_leave_applications(self):
+		employee = self.get_test_employee("_Test Employee")
+		employee_1 = self.get_test_employee("_Test Employee 1")
 		records = [
 			{
 				"company": "_Test Company",
 				"doctype": "Leave Application",
-				"employee": "_T-Employee-00001",
+				"employee": employee,
 				"from_date": "2013-05-01",
 				"description": "_Test Reason",
 				"leave_type": "_Test Leave Type",
@@ -231,7 +235,7 @@ class BootStrapTestData:
 			{
 				"company": "_Test Company",
 				"doctype": "Leave Application",
-				"employee": "_T-Employee-00002",
+				"employee": employee_1,
 				"from_date": "2013-05-01",
 				"description": "_Test Reason",
 				"leave_type": "_Test Leave Type",
@@ -241,7 +245,7 @@ class BootStrapTestData:
 			{
 				"company": "_Test Company",
 				"doctype": "Leave Application",
-				"employee": "_T-Employee-00001",
+				"employee": employee,
 				"from_date": "2013-01-15",
 				"description": "_Test Reason",
 				"leave_type": "_Test Leave Type LWP",
@@ -250,6 +254,9 @@ class BootStrapTestData:
 			},
 		]
 		self.make_records(["employee", "from_date"], records)
+
+	def get_test_employee(self, first_name):
+		return frappe.db.get_value("Employee", {"first_name": first_name}, "name")
 
 	def make_leave_block_lists(self):
 		records = [
@@ -282,12 +289,12 @@ class BootStrapTestData:
 			{
 				"company": "_Test Company",
 				"doctype": "Leave Block List",
-				"leave_type": "Casual Leave",
+				"leave_type": "_Test Leave Type",
 				"leave_block_list_allowed": [
 					{
 						"allow_user": "test1@example.com",
 						"doctype": "Leave Block List Allow",
-						"parent": "_Test Leave Block List Casual Leave 1",
+						"parent": "_Test Leave Block List 1",
 						"parentfield": "leave_block_list_allowed",
 						"parenttype": "Leave Block List",
 					}
@@ -296,32 +303,32 @@ class BootStrapTestData:
 					{
 						"block_date": "2013-01-16",
 						"doctype": "Leave Block List Date",
-						"parent": "_Test Leave Block List Casual Leave 1",
+						"parent": "_Test Leave Block List 1",
 						"parentfield": "leave_block_list_dates",
 						"parenttype": "Leave Block List",
 						"reason": "First work day",
 					}
 				],
-				"leave_block_list_name": "_Test Leave Block List Casual Leave 1",
+				"leave_block_list_name": "_Test Leave Block List 1",
 				"year": "_Test Fiscal Year 2013",
 				"applies_to_all_departments": 1,
 			},
 			{
 				"company": "_Test Company",
 				"doctype": "Leave Block List",
-				"leave_type": "Casual Leave",
+				"leave_type": "_Test Leave Type",
 				"leave_block_list_allowed": [],
 				"leave_block_list_dates": [
 					{
 						"block_date": "2013-01-19",
 						"doctype": "Leave Block List Date",
-						"parent": "_Test Leave Block List Casual Leave 2",
+						"parent": "_Test Leave Block List 2",
 						"parentfield": "leave_block_list_dates",
 						"parenttype": "Leave Block List",
 						"reason": "First work day",
 					}
 				],
-				"leave_block_list_name": "_Test Leave Block List Casual Leave 2",
+				"leave_block_list_name": "_Test Leave Block List 2",
 				"year": "_Test Fiscal Year 2013",
 				"applies_to_all_departments": 1,
 			},
@@ -336,7 +343,7 @@ class BootStrapTestData:
 
 	def update_system_settings(self):
 		system_settings = frappe.get_doc("System Settings")
-		system_settings.country = "India"
+		system_settings.country = "China"
 		system_settings.save()
 
 	def make_records(self, key, records):

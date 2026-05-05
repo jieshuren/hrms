@@ -8,6 +8,7 @@ from hrms.api.mobile import (
 	get_mobile_attendance_records,
 	get_mobile_material_request_detail,
 	get_mobile_material_request_queue,
+	get_mobile_purchase_items,
 )
 
 
@@ -50,13 +51,28 @@ class TestMobileAPI(FrappeTestCase):
 			name_set = set(names)
 			return [row for row in rows if row.name in name_set]
 
+		def fake_get_all(doctype, *args, **kwargs):
+			if doctype == "Workflow Action":
+				return [
+					frappe._dict(
+						name="WA-0001",
+						status="Completed",
+						workflow_state="Pending Department Approval",
+						completed_by="dept@example.com",
+						completed_by_role="Employee",
+						creation="2026-04-26 09:30:00",
+						modified="2026-04-26 09:40:00",
+					)
+				]
+			return [frappe._dict(parent="ACC-PAY-2026-0001")]
+
 		with (
 			patch("hrms.api.mobile._ensure_material_request_access"),
 			patch.object(frappe, "get_doc", return_value=FakeMaterialRequest()),
 			patch("hrms.api.mobile._get_employee_lookup", return_value=({}, {"buyer@example.com": {"employee_name": "张采购", "department": "采购部"}})),
 			patch("hrms.api.mobile._get_child_parent_names", side_effect=lambda doctype, fieldname, parent: child_links[doctype]),
 			patch("hrms.api.mobile._get_docs_by_names", side_effect=fake_get_docs_by_names),
-			patch.object(frappe, "get_all", return_value=[frappe._dict(parent="ACC-PAY-2026-0001")]),
+			patch.object(frappe, "get_all", side_effect=fake_get_all),
 			patch.object(frappe, "session", frappe._dict(user="procurement@example.com")),
 		):
 			result = get_mobile_material_request_detail("MAT-MR-2026-0001")
@@ -71,10 +87,18 @@ class TestMobileAPI(FrappeTestCase):
 		self.assertEqual(result["progress"]["purchase_invoice"], 1)
 		self.assertEqual(result["progress"]["payment_entry"], 1)
 		self.assertEqual(result["related_docs"]["payment_entry"][0]["name"], "ACC-PAY-2026-0001")
+		self.assertEqual(result["workflow_actions"][0]["completed_by"], "dept@example.com")
 
 	def test_material_request_queue_returns_empty_for_non_procurement_user(self):
 		with patch.object(frappe, "get_roles", return_value=["Employee"]):
 			self.assertEqual(get_mobile_material_request_queue(), [])
+
+	def test_mobile_purchase_items_excludes_template_items(self):
+		with patch.object(frappe, "get_all", return_value=[]) as mock_get_all:
+			get_mobile_purchase_items()
+
+		filters = mock_get_all.call_args.kwargs["filters"]
+		self.assertEqual(filters["has_variants"], 0)
 
 	def test_material_request_queue_serializes_requester_and_items(self):
 		def fake_get_all(doctype, *args, **kwargs):
@@ -126,6 +150,18 @@ class TestMobileAPI(FrappeTestCase):
 		with (
 			patch.object(frappe, "get_roles", return_value=["Purchase User"]),
 			patch.object(frappe, "get_all", side_effect=fake_get_all),
+			patch("hrms.api.mobile._get_mr_list_fields", return_value=[
+				"name",
+				"transaction_date",
+				"schedule_date",
+				"status",
+				"material_request_type",
+				"owner",
+				"per_ordered",
+				"docstatus",
+				"modified",
+				"creation",
+			]),
 		):
 			rows = get_mobile_material_request_queue(limit=10)
 
