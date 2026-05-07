@@ -1156,3 +1156,516 @@ def get_mobile_item_price(item_code: str, price_list: str) -> dict:
                 as_dict=True
         )
         return price or {"price_list_rate": 0, "currency": ""}
+
+
+@frappe.whitelist()
+def get_mobile_suppliers() -> list[dict]:
+	if not _can_manage_procurement():
+		return []
+	return frappe.get_all(
+		"Supplier",
+		fields=["name", "supplier_name", "supplier_group"],
+		filters={"disabled": 0},
+		order_by="supplier_name asc",
+		limit_page_length=500,
+	)
+
+
+@frappe.whitelist()
+def create_mobile_rfq(material_request: str, suppliers: str | list[str] | None = None, **kwargs) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	mr_name = str(material_request or "").strip()
+	if not mr_name:
+		frappe.throw(_("请指定物料申请"))
+
+	mr = frappe.get_doc("Material Request", mr_name)
+	if cint(mr.docstatus) != 1:
+		frappe.throw(_("物料申请必须已提交才能创建询价单"))
+	if mr.material_request_type != "Purchase":
+		frappe.throw(_("只有采购类型的物料申请才能创建询价单"))
+
+	supplier_list = _parse_name_list(suppliers)
+	if not supplier_list:
+		frappe.throw(_("请至少选择一个供应商"))
+
+	from erpnext.stock.doctype.material_request.material_request import make_request_for_quotation
+
+	rfq = make_request_for_quotation(mr_name)
+	rfq.company = mr.company
+	rfq.suppliers = []
+	for supplier_name in supplier_list:
+		rfq.append("suppliers", {"supplier": supplier_name})
+
+	rfq.flags.ignore_permissions = True
+	rfq.insert()
+
+	return {"name": rfq.name, "docstatus": cint(rfq.docstatus)}
+
+
+@frappe.whitelist()
+def submit_mobile_rfq(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Request for Quotation", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的询价单可以提交"))
+
+	doc.flags.ignore_permissions = True
+	doc.submit()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus)}
+
+
+@frappe.whitelist()
+def get_mobile_rfq_share_links(name: str) -> list[dict]:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Request for Quotation", name)
+	if cint(doc.docstatus) != 1:
+		frappe.throw(_("只有已提交的询价单可以分享"))
+
+	portal_route = frappe.db.get_value(
+		"Portal Menu Item", {"reference_doctype": "Request for Quotation"}, ["route"]
+	)
+	if not portal_route:
+		portal_route = "rfq"
+
+	result = []
+	for supplier_row in doc.suppliers:
+		supplier_name = supplier_row.supplier
+		supplier_detail = frappe.db.get_value(
+			"Supplier", supplier_name, ["supplier_name", "email_id", "mobile_no"], as_dict=True
+		) or {}
+
+		mobile_no = ""
+		email_id = supplier_row.email_id or supplier_detail.get("email_id") or ""
+
+		if supplier_row.contact:
+			contact_info = frappe.db.get_value(
+				"Contact", supplier_row.contact, ["mobile_no", "phone", "email_id"], as_dict=True
+			) or {}
+			mobile_no = contact_info.get("mobile_no") or contact_info.get("phone") or ""
+			email_id = email_id or contact_info.get("email_id") or ""
+
+		if not mobile_no:
+			mobile_no = supplier_detail.get("mobile_no") or ""
+
+		update_password_link = ""
+		portal_user_ready = False
+		login_identifier = ""
+		default_password = ""
+
+		if mobile_no:
+			login_identifier = mobile_no
+			user_email = mobile_no + "@supplier.local"
+			if len(mobile_no) >= 6:
+				default_password = mobile_no[-6:]
+
+			user_exists = bool(frappe.db.exists("User", {"email": user_email}))
+			if not user_exists:
+				user_exists = bool(frappe.db.exists("User", {"mobile_no": mobile_no}))
+
+			if user_exists:
+				existing_user = frappe.get_doc("User", {"mobile_no": mobile_no}) or frappe.get_doc("User", user_email)
+				if existing_user and existing_user.user_type == "Website User":
+					try:
+						update_password_link = existing_user._reset_password()
+					except Exception:
+						update_password_link = ""
+					portal_user_ready = _ensure_supplier_portal_user(supplier_name, existing_user.name)
+			else:
+				try:
+					user = frappe.get_doc({
+						"doctype": "User",
+						"email": user_email,
+						"mobile_no": mobile_no,
+						"first_name": supplier_detail.get("supplier_name") or supplier_name,
+						"user_type": "Website User",
+						"send_welcome_email": 0,
+						"roles": [{"role": "Supplier"}],
+					})
+					user.flags.ignore_permissions = True
+					user.flags.ignore_password_policy = True
+					user.insert(ignore_permissions=True)
+
+					if default_password:
+						from frappe.utils.password import update_password
+						update_password(user.name, default_password)
+
+					portal_user_ready = _ensure_supplier_portal_user(supplier_name, user.name)
+				except Exception:
+					frappe.db.rollback()
+		elif email_id:
+			login_identifier = email_id
+			user_exists = bool(frappe.db.exists("User", email_id))
+
+			if user_exists:
+				user = frappe.get_doc("User", email_id)
+				if user.user_type == "Website User":
+					try:
+						update_password_link = user._reset_password()
+					except Exception:
+						update_password_link = ""
+					portal_user_ready = _ensure_supplier_portal_user(supplier_name, email_id)
+			else:
+				try:
+					user = frappe.get_doc({
+						"doctype": "User",
+						"email": email_id,
+						"first_name": supplier_detail.get("supplier_name") or supplier_name,
+						"user_type": "Website User",
+						"send_welcome_email": 0,
+						"roles": [{"role": "Supplier"}],
+					})
+					user.flags.ignore_permissions = True
+					user.flags.ignore_password_policy = True
+					user.insert(ignore_permissions=True)
+
+					from frappe.utils.password import update_password
+					update_password(user.name, frappe.generate_hash(length=12))
+
+					try:
+						update_password_link = user._reset_password()
+					except Exception:
+						update_password_link = ""
+
+					portal_user_ready = _ensure_supplier_portal_user(supplier_name, email_id)
+				except Exception:
+					frappe.db.rollback()
+
+		result.append({
+			"supplier": supplier_name,
+			"supplier_name": supplier_detail.get("supplier_name") or supplier_name,
+			"email_id": email_id,
+			"mobile_no": mobile_no,
+			"login_identifier": login_identifier,
+			"rfq_route": f"/{portal_route}/{name}",
+			"update_password_link": update_password_link,
+			"default_password": default_password if default_password else "",
+			"user_exists": user_exists if mobile_no else (bool(email_id and frappe.db.exists("User", email_id))),
+			"portal_user_ready": portal_user_ready,
+		})
+
+	frappe.db.commit()
+	return result
+
+
+def _ensure_supplier_portal_user(supplier_name: str, user_email: str) -> bool:
+	try:
+		supplier = frappe.get_doc("Supplier", supplier_name)
+		existing = any(
+			pu.user == user_email for pu in (supplier.get("portal_users") or [])
+		)
+		if not existing:
+			supplier.append("portal_users", {"user": user_email})
+			supplier.flags.ignore_permissions = True
+			supplier.save(ignore_permissions=True)
+		_ensure_supplier_rfq_read_permission()
+		return True
+	except Exception:
+		return False
+
+
+def _ensure_supplier_rfq_read_permission():
+	supplier_perm = frappe.db.get_value(
+		"DocPerm", {"parent": "Request for Quotation", "role": "Supplier"}, "read"
+	)
+	if supplier_perm != 1:
+		if supplier_perm is not None:
+			frappe.db.set_value(
+				"DocPerm", {"parent": "Request for Quotation", "role": "Supplier"}, "read", 1
+			)
+		else:
+			doc = frappe.new_doc("DocPerm")
+			doc.parent = "Request for Quotation"
+			doc.parenttype = "DocType"
+			doc.parentfield = "permissions"
+			doc.role = "Supplier"
+			doc.read = 1
+			doc.write = 0
+			doc.create = 0
+			doc.delete = 0
+			doc.insert(ignore_permissions=True)
+
+
+@frappe.whitelist()
+def get_mobile_rfq_detail(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	doc = frappe.get_doc("Request for Quotation", name)
+	result = doc.as_dict()
+
+	result["suppliers_info"] = []
+	for s in doc.suppliers:
+		info = frappe.db.get_value(
+			"Supplier", s.supplier, ["supplier_name", "email_id"], as_dict=True
+		) or {}
+		result["suppliers_info"].append({
+			"supplier": s.supplier,
+			"supplier_name": info.get("supplier_name") or s.supplier,
+			"email_id": s.email_id or info.get("email_id") or "",
+			"contact": s.contact or "",
+		})
+
+	return result
+
+
+@frappe.whitelist()
+def create_mobile_supplier_quotation(rfq_name: str, supplier: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	rfq_name = str(rfq_name or "").strip()
+	supplier = str(supplier or "").strip()
+	if not rfq_name:
+		frappe.throw(_("请指定询价单"))
+	if not supplier:
+		frappe.throw(_("请指定供应商"))
+
+	rfq = frappe.get_doc("Request for Quotation", rfq_name)
+	if cint(rfq.docstatus) != 1:
+		frappe.throw(_("询价单必须已提交才能创建供应商报价"))
+
+	supplier_in_rfq = any(s.supplier == supplier for s in rfq.suppliers)
+	if not supplier_in_rfq:
+		frappe.throw(_("该供应商不在此询价单中"))
+
+	from erpnext.buying.doctype.request_for_quotation.request_for_quotation import (
+		make_supplier_quotation_from_rfq,
+	)
+
+	sq = make_supplier_quotation_from_rfq(rfq_name, for_supplier=supplier)
+	sq.flags.ignore_permissions = True
+	sq.insert()
+
+	return {"name": sq.name, "docstatus": cint(sq.docstatus), "supplier": supplier}
+
+
+@frappe.whitelist()
+def submit_mobile_supplier_quotation(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Supplier Quotation", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的供应商报价可以提交"))
+
+	doc.flags.ignore_permissions = True
+	doc.submit()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus)}
+
+
+@frappe.whitelist()
+def update_mobile_supplier_quotation_prices(payload: str | dict | None = None, **kwargs) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	data = _normalize_material_request_payload(payload, kwargs)
+	name = str(data.get("name") or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Supplier Quotation", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的供应商报价可以修改"))
+
+	items_data = data.get("items") or []
+	if isinstance(items_data, str):
+		items_data = json.loads(items_data)
+
+	for item_update in items_data:
+		item_name = str(item_update.get("name") or "").strip()
+		if not item_name:
+			continue
+		for row in doc.items:
+			if row.name == item_name:
+				if "rate" in item_update:
+					row.rate = flt(item_update["rate"])
+				if "qty" in item_update:
+					row.qty = flt(item_update["qty"])
+				break
+
+	doc.run_method("calculate_taxes_and_totals")
+	doc.flags.ignore_permissions = True
+	doc.save()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus), "grand_total": flt(doc.grand_total)}
+
+
+@frappe.whitelist()
+def create_mobile_purchase_order(sq_name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	sq_name = str(sq_name or "").strip()
+	if not sq_name:
+		frappe.throw(_("请指定供应商报价"))
+
+	sq = frappe.get_doc("Supplier Quotation", sq_name)
+	if cint(sq.docstatus) != 1:
+		frappe.throw(_("供应商报价必须已提交才能创建采购订单"))
+
+	from erpnext.buying.doctype.supplier_quotation.supplier_quotation import make_purchase_order
+
+	po = make_purchase_order(sq_name)
+	po.flags.ignore_permissions = True
+	po.insert()
+
+	return {"name": po.name, "docstatus": cint(po.docstatus), "supplier": po.supplier, "grand_total": flt(po.grand_total)}
+
+
+@frappe.whitelist()
+def submit_mobile_purchase_order(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Purchase Order", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的采购订单可以提交"))
+
+	doc.flags.ignore_permissions = True
+	doc.submit()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus)}
+
+
+@frappe.whitelist()
+def create_mobile_purchase_receipt(po_name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	po_name = str(po_name or "").strip()
+	if not po_name:
+		frappe.throw(_("请指定采购订单"))
+
+	po = frappe.get_doc("Purchase Order", po_name)
+	if cint(po.docstatus) != 1:
+		frappe.throw(_("采购订单必须已提交才能创建采购收货"))
+
+	from erpnext.buying.doctype.purchase_order.purchase_order import make_purchase_receipt
+
+	pr = make_purchase_receipt(po_name)
+	pr.flags.ignore_permissions = True
+	pr.insert()
+
+	return {"name": pr.name, "docstatus": cint(pr.docstatus), "supplier": pr.supplier, "grand_total": flt(pr.grand_total)}
+
+
+@frappe.whitelist()
+def submit_mobile_purchase_receipt(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Purchase Receipt", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的采购收货可以提交"))
+
+	doc.flags.ignore_permissions = True
+	doc.submit()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus)}
+
+
+@frappe.whitelist()
+def create_mobile_purchase_invoice(pr_name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	pr_name = str(pr_name or "").strip()
+	if not pr_name:
+		frappe.throw(_("请指定采购收货"))
+
+	pr = frappe.get_doc("Purchase Receipt", pr_name)
+	if cint(pr.docstatus) != 1:
+		frappe.throw(_("采购收货必须已提交才能创建采购发票"))
+
+	from erpnext.stock.doctype.purchase_receipt.purchase_receipt import make_purchase_invoice
+
+	pi = make_purchase_invoice(pr_name)
+	pi.flags.ignore_permissions = True
+	pi.insert()
+
+	return {"name": pi.name, "docstatus": cint(pi.docstatus), "supplier": pi.supplier, "grand_total": flt(pi.grand_total)}
+
+
+@frappe.whitelist()
+def submit_mobile_purchase_invoice(name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	name = str(name or "").strip()
+	if not name:
+		frappe.throw(_("缺少单据名称"))
+
+	doc = frappe.get_doc("Purchase Invoice", name)
+	if cint(doc.docstatus) != 0:
+		frappe.throw(_("只有草稿状态的采购发票可以提交"))
+
+	doc.flags.ignore_permissions = True
+	doc.submit()
+
+	return {"name": doc.name, "docstatus": cint(doc.docstatus)}
+
+
+@frappe.whitelist()
+def get_mobile_procurement_doc_detail(doctype: str, name: str) -> dict:
+	if not _can_manage_procurement():
+		frappe.throw(_("您没有采购管理权限"), frappe.PermissionError)
+
+	doctype = str(doctype or "").strip()
+	name = str(name or "").strip()
+	if not doctype or not name:
+		frappe.throw(_("参数不完整"))
+
+	allowed = {
+		"Request for Quotation",
+		"Supplier Quotation",
+		"Purchase Order",
+		"Purchase Receipt",
+		"Purchase Invoice",
+	}
+	if doctype not in allowed:
+		frappe.throw(_("不支持的单据类型"))
+
+	doc = frappe.get_doc(doctype, name)
+	result = doc.as_dict()
+
+	if doctype == "Request for Quotation":
+		result["suppliers_info"] = []
+		for s in doc.suppliers:
+			info = frappe.db.get_value(
+				"Supplier", s.supplier, ["supplier_name", "email_id"], as_dict=True
+			) or {}
+			result["suppliers_info"].append({
+				"supplier": s.supplier,
+				"supplier_name": info.get("supplier_name") or s.supplier,
+				"email_id": s.email_id or info.get("email_id") or "",
+			})
+
+	return result
