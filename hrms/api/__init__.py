@@ -1308,7 +1308,7 @@ def _do_recognize_receipt(image_base64, file_type="image", model=None, server_ur
 				]
 			}
 		],
-		"temperature": 0.1,
+		"temperature": 1.0,
 		"stream": False
 	}
 	payload_str = json.dumps(payload, ensure_ascii=False)
