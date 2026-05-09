@@ -1068,18 +1068,7 @@ def classify_expense_text(text_content: str, category_hierarchy: str, model: str
 	if not text_content:
 		return {"报销类型": "无法识别"}
 
-	ai_model = (model or "").strip() or "gemini-3.1-flash-lite-preview"
-	api_key = (frappe.conf.get("gemini_api_key") or "").strip()
-	
-	if not api_key:
-		try:
-			with open(".gemini_key", "r") as f:
-				api_key = f.read().strip()
-		except:
-			pass
-	
-	if not api_key:
-		frappe.throw("Gemini 分类失败：未配置 gemini_api_key。")
+	ai_model = (model or "").strip() or "hy3-preview"
 
 	prompt = (
 		f"你是一个专业的财务审计助手。请根据提供的费用内容，将其归类到最合适的财务类型中。\n"
@@ -1089,20 +1078,32 @@ def classify_expense_text(text_content: str, category_hierarchy: str, model: str
 		"若无法判断，请返回「无法识别」。不要返回任何解释文字。"
 	)
 
-	endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{ai_model}:generateContent?key={api_key}"
+	# 统一使用 OpenAI 兼容格式（TokenHub / 混元等）
+	api_key = (frappe.conf.get("hunyuan_api_key") or "").strip() or "sk-JIG9RZUiVnJZ3KxJCUIFTbFQA1GXRRjmWCHSBKwuGKyioOCg"
+	endpoint = (frappe.conf.get("hunyuan_endpoint") or "").strip() \
+			   or "https://tokenhub.tencentmaas.com/v1/chat/completions"
+
 	payload = {
-		"contents": [{"parts": [{"text": prompt}]}],
-		"generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
+		"model": "hy3-preview",
+		"messages": [{"role": "user", "content": prompt}],
+		"temperature": 0.1,
+		"stream": False,
+		"response_format": {"type": "json_object"}
 	}
+	payload_str = json.dumps(payload, ensure_ascii=False)
+
+	headers = {"Content-Type": "application/json; charset=utf-8"}
+	if api_key:
+		headers["Authorization"] = f"Bearer {api_key}"
 
 	try:
-		response = http_requests.post(endpoint, json=payload, timeout=30)
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=30)
 		response.raise_for_status()
 		res_data = response.json()
-		content = res_data["candidates"][0]["content"]["parts"][0]["text"]
+		content = res_data["choices"][0]["message"]["content"]
 		return json.loads(content)
 	except Exception as e:
-		frappe.log_error(f"Gemini Text Classification Error: {e}", "Expense Classification Failure")
+		frappe.log_error(f"Classification Error: {e}", "Expense Classification Failure")
 		return {"报销类型": "无法识别"}
 
 # Receipt Image Recognition
@@ -1110,7 +1111,7 @@ def classify_expense_text(text_content: str, category_hierarchy: str, model: str
 def recognize_receipt_image(**kwargs):
 	"""
 	通过后端代理调用 AI 模型进行报销票据图片识别。
-	支持 Ollama 和 Google Gemini 两种后端。
+	支持 OpenAI 兼容格式（TokenHub/hunyuan 等）。
 	图片通过 Base64 编码在 JSON body 中发送；PDF 请使用 recognize_receipt_file。
 	"""
 	image_base64 = kwargs.get("image_base64")
@@ -1244,21 +1245,16 @@ def recognize_receipt_file(**kwargs):
 
 
 def _do_recognize_receipt(image_base64, file_type="image", model=None, server_url=None, category_hierarchy=None):
-	"""共用识别逻辑，被 recognize_receipt_image 和 recognize_receipt_file 调用。"""
+	"""共用识别逻辑，被 recognize_receipt_image 和 recognize_receipt_file 调用。
+	统一使用 OpenAI 兼容格式（TokenHub / 混元等视觉模型）。
+	"""
 	import json
+	import re
 	import requests as http_requests
 	from requests.exceptions import RequestException
 
 	if not image_base64:
 		frappe.throw("识别请求失败：未收到数据")
-
-	ai_model = (
-		(model or "").strip()
-		or (frappe.conf.get("ollama_model") or "").strip()
-		or "gemini-3.1-flash-lite-preview"
-	)
-
-	is_gemini = "gemini" in ai_model.lower()
 
 	prompt_keys = "费用日期、名称、单据类型、金额、总额、数量、单价、单位。"
 	prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、单据类型、单位为字符串。"
@@ -1294,86 +1290,55 @@ def _do_recognize_receipt(image_base64, file_type="image", model=None, server_ur
 		f"{category_instruction}"
 	)
 
-	if is_gemini:
-		api_key = (frappe.conf.get("gemini_api_key") or "").strip()
-		if not api_key:
-			try:
-				with open(".gemini_key", "r") as f:
-					api_key = f.read().strip()
-			except:
-				pass
-
-		if not api_key:
-			frappe.throw("Gemini 识别失败：未配置 gemini_api_key。")
-
-		if "," in image_base64:
-			pure_base64 = image_base64.split(",")[1]
-		else:
-			pure_base64 = image_base64
-
-		endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{ai_model}:generateContent?key={api_key}"
-		mime_type = "application/pdf" if is_pdf else "image/jpeg"
-		payload = {
-			"contents": [
-				{
-					"parts": [
-						{"text": prompt},
-						{"inline_data": {"mime_type": mime_type, "data": pure_base64}}
-					]
-				}
-			],
-			"generationConfig": {
-				"temperature": 0.1,
-				"response_mime_type": "application/json"
-			}
-		}
-
-		try:
-			response = http_requests.post(endpoint, json=payload, timeout=120)
-			response.raise_for_status()
-			res_data = response.json()
-
-			try:
-				content = res_data["candidates"][0]["content"]["parts"][0]["text"]
-				return json.loads(content)
-			except (KeyError, IndexError, ValueError) as e:
-				frappe.log_error(f"Gemini Parsing Error: {e}\nRaw: {res_data}", "Receipt recognition Failure")
-				frappe.throw("Gemini 返回内容解析失败")
-
-		except RequestException as exc:
-			frappe.throw(f"连接 Gemini 服务失败：{exc}")
-
+	# 统一使用 OpenAI 兼容格式（TokenHub / Kimi 视觉模型）
+	if "," in image_base64:
+		pure_base64 = image_base64.split(",")[1]
 	else:
-		if is_pdf:
-			frappe.throw("Ollama 视觉模型不支持 PDF 文件识别，请使用 Gemini 模型或上传图片格式")
+		pure_base64 = image_base64
 
-		ollama_server_url = (
-		(server_url or "").strip()
-		or (frappe.conf.get("ollama_server_url") or "").strip()
-		or "https://ollama.com/api"
-	)
-		ollama_api_key = (frappe.conf.get("ollama_api_key") or "").strip()
+	image_url = f"data:image/jpeg;base64,{pure_base64}"
+	payload = {
+		"model": "kimi-k2.6",
+		"messages": [
+			{
+				"role": "user",
+				"content": [
+					{"type": "text", "text": prompt},
+					{"type": "image_url", "image_url": {"url": image_url}}
+				]
+			}
+		],
+		"temperature": 0.1,
+		"stream": False
+	}
+	payload_str = json.dumps(payload, ensure_ascii=False)
 
-		base_url = ollama_server_url.rstrip("/")
-		endpoint = f"{base_url}/chat" if base_url.endswith("/api") else f"{base_url}/api/chat"
+	api_key = (frappe.conf.get("hunyuan_api_key") or "").strip() or "sk-JIG9RZUiVnJZ3KxJCUIFTbFQA1GXRRjmWCHSBKwuGKyioOCg"
+	endpoint = (frappe.conf.get("hunyuan_endpoint") or "").strip() \
+			   or "https://tokenhub.tencentmaas.com/v1/chat/completions"
 
-		payload = {
-			"model": ai_model,
-			"stream": False,
-			"options": {"temperature": 0.1},
-			"messages": [{"role": "user", "content": prompt, "images": [image_base64]}],
-		}
+	headers = {"Content-Type": "application/json; charset=utf-8"}
+	if api_key:
+		headers["Authorization"] = f"Bearer {api_key}"
 
-		headers = {"Content-Type": "application/json"}
-		if ollama_api_key:
-			headers["Authorization"] = f"Bearer {ollama_api_key}"
+	try:
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=120)
+		response.raise_for_status()
+		res_data = response.json()
 
 		try:
-			response = http_requests.post(endpoint, json=payload, headers=headers, timeout=120)
-			response.raise_for_status()
-			return response.json()
-		except RequestException as exc:
-			frappe.throw(f"无法连接到 Ollama 服务（{ollama_server_url}）：{exc}")
+			content = res_data["choices"][0]["message"]["content"]
+			# 尝试提取 markdown 代码块中的 JSON
+			json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", content)
+			if json_match:
+				content = json_match.group(1).strip()
+			return json.loads(content)
+		except (KeyError, IndexError, ValueError) as e:
+			frappe.log_error(f"Vision Model Parsing Error: {e}\nRaw: {res_data}", "Receipt Recognition Failure")
+			frappe.throw("视觉模型返回内容解析失败：" + str(e))
+
+	except RequestException as exc:
+		frappe.throw(f"连接视觉识别服务失败：{exc}")
 
 
 @frappe.whitelist()
