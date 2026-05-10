@@ -1060,58 +1060,69 @@ def ensure_expense_claim_folders():
 def classify_expense_text(text_content: str, category_hierarchy: str, model: str | None = None) -> dict:
 	"""
 	基于纯文本内容对费用进行 AI 分类。无需图片，速度更快，成本更低。
+	配置见项目根目录 receipt_recognition.json（text_classification 段）。
 	"""
 	import json
 	import requests as http_requests
 	from requests.exceptions import RequestException
 
+	from hrms.receipt_recognition_settings import (
+		build_classification_prompt,
+		classification_http_headers,
+		get_receipt_ai_config,
+	)
+
 	if not text_content:
 		return {"报销类型": "无法识别"}
 
-	ai_model = (model or "").strip() or "hy3-preview"
-
-	prompt = (
-		f"你是一个专业的财务审计助手。请根据提供的费用内容，将其归类到最合适的财务类型中。\n"
-		f"【分类层级参考】\n{category_hierarchy}\n\n"
-		f"【待分类内容】\n{text_content}\n\n"
-		"【要求】请仅返回一个 JSON 对象，包含「报销类型」键。值必须是上述层级中横线后面的确切类型名。\n"
-		"若无法判断，请返回「无法识别」。不要返回任何解释文字。"
+	cfg = get_receipt_ai_config()
+	tc = cfg.get("text_classification") or {}
+	va = cfg.get("vision_api") or {}
+	fallback = (
+		tc.get("fallback_response")
+		if isinstance(tc.get("fallback_response"), dict)
+		else {"报销类型": "无法识别"}
 	)
 
-	# 统一使用 OpenAI 兼容格式（TokenHub / 混元等）
-	api_key = (frappe.conf.get("hunyuan_api_key") or "").strip() or "sk-JIG9RZUiVnJZ3KxJCUIFTbFQA1GXRRjmWCHSBKwuGKyioOCg"
-	endpoint = (frappe.conf.get("hunyuan_endpoint") or "").strip() \
-			   or "https://tokenhub.tencentmaas.com/v1/chat/completions"
+	endpoint = str(tc.get("endpoint") or va.get("endpoint") or "").strip()
+	if not endpoint:
+		return fallback
+
+	headers = classification_http_headers(cfg)
+	if "Authorization" not in headers:
+		return fallback
+
+	ai_model = (model or "").strip() or str(tc.get("model_default") or "hy3-preview").strip()
+	prompt = build_classification_prompt(cfg, text_content, category_hierarchy)
 
 	payload = {
-		"model": "hy3-preview",
+		"model": ai_model,
 		"messages": [{"role": "user", "content": prompt}],
-		"temperature": 0.1,
+		"temperature": float(tc.get("temperature") if tc.get("temperature") is not None else 0.1),
 		"stream": False,
-		"response_format": {"type": "json_object"}
 	}
+	if tc.get("use_response_format_json_object"):
+		payload["response_format"] = {"type": "json_object"}
 	payload_str = json.dumps(payload, ensure_ascii=False)
 
-	headers = {"Content-Type": "application/json; charset=utf-8"}
-	if api_key:
-		headers["Authorization"] = f"Bearer {api_key}"
+	timeout = int(tc.get("timeout_seconds") or 30)
 
 	try:
-		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=30)
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=timeout)
 		response.raise_for_status()
 		res_data = response.json()
 		content = res_data["choices"][0]["message"]["content"]
 		return json.loads(content)
 	except Exception as e:
 		frappe.log_error(f"Classification Error: {e}", "Expense Classification Failure")
-		return {"报销类型": "无法识别"}
+		return fallback
 
 # Receipt Image Recognition
 @frappe.whitelist(methods=["POST"])
 def recognize_receipt_image(**kwargs):
 	"""
 	通过后端代理调用 AI 模型进行报销票据图片识别。
-	支持 OpenAI 兼容格式（TokenHub/hunyuan 等）。
+	支持 OpenAI 兼容格式；远程网关与提示词见项目根目录 receipt_recognition.json。
 	图片通过 Base64 编码在 JSON body 中发送；PDF 请使用 recognize_receipt_file。
 	"""
 	image_base64 = kwargs.get("image_base64")
@@ -1150,7 +1161,6 @@ def _generate_pdf_thumbnail(file_data, width=300):
 		img_bytes = pix.tobytes("jpeg")
 		doc.close()
 		thumbnail = base64.b64encode(img_bytes).decode("utf-8")
-		frappe.log_error(f"PDF 缩略图生成成功，base64 长度: {len(thumbnail)}", "PDF Thumbnail")
 		return thumbnail
 	except Exception as e:
 		frappe.log_error(f"PDF 缩略图生成失败: {e}", "PDF Thumbnail")
@@ -1195,8 +1205,9 @@ def get_pdf_thumbnail(file_url):
 @frappe.whitelist(methods=["POST"])
 def recognize_receipt_file(**kwargs):
 	"""
-	通过文件上传方式接收票据文件（主要支持 PDF），调用 AI 模型识别。
+	通过文件上传方式接收票据文件（主要支持 PDF），调用远程 AI 网关识别。
 	解决大文件通过 JSON POST 发送 Base64 时超出请求体限制的问题。
+	网关与提示词见项目根目录 receipt_recognition.json。
 	"""
 	import base64
 	import json
@@ -1244,95 +1255,156 @@ def recognize_receipt_file(**kwargs):
 	return result
 
 
-def _do_recognize_receipt(image_base64, file_type="image", model=None, server_url=None, category_hierarchy=None):
-	"""共用识别逻辑，被 recognize_receipt_image 和 recognize_receipt_file 调用。
-	统一使用 OpenAI 兼容格式（TokenHub / 混元等视觉模型）。
-	"""
+def _extract_braced_json_fragments(text: str) -> list:
+	"""从可能含前后缀的文本中提取最外层 {...} 片段（与前端 OCR 解析策略一致）。"""
+	result = []
+	start = -1
+	depth = 0
+	in_string = False
+	escape = False
+	for i, ch in enumerate(text):
+		if in_string:
+			if escape:
+				escape = False
+				continue
+			if ch == "\\":
+				escape = True
+				continue
+			if ch == '"':
+				in_string = False
+			continue
+		if ch == '"':
+			in_string = True
+			continue
+		if ch == "{":
+			if depth == 0:
+				start = i
+			depth += 1
+			continue
+		if ch == "}":
+			if depth <= 0:
+				continue
+			depth -= 1
+			if depth == 0 and start >= 0:
+				result.append(text[start : i + 1])
+				start = -1
+	return result
+
+
+def _parse_json_from_model_content(content) -> dict | list:
+	"""解析视觉模型 message.content：整段 JSON、markdown 代码块、或文本中的 JSON 对象。"""
 	import json
 	import re
+
+	if content is None:
+		raise ValueError("empty content")
+	s = str(content).strip()
+	m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, flags=re.IGNORECASE)
+	if m:
+		s = m.group(1).strip()
+	try:
+		return json.loads(s)
+	except ValueError:
+		pass
+	for frag in _extract_braced_json_fragments(s):
+		try:
+			obj = json.loads(frag)
+			if isinstance(obj, (dict, list)):
+				return obj
+		except ValueError:
+			continue
+	raise ValueError("模型返回内容中未找到有效 JSON")
+
+
+def _do_recognize_receipt(image_base64, file_type="image", model=None, server_url=None, category_hierarchy=None):
+	"""共用识别逻辑，被 recognize_receipt_image 和 recognize_receipt_file 调用。
+	统一使用 OpenAI 兼容格式（远程网关）。配置见项目根目录 receipt_recognition.json。
+	"""
+	import json
 	import requests as http_requests
 	from requests.exceptions import RequestException
+
+	from hrms.receipt_recognition_settings import (
+		build_receipt_vision_prompt,
+		get_receipt_ai_config,
+		vision_http_headers,
+	)
 
 	if not image_base64:
 		frappe.throw("识别请求失败：未收到数据")
 
-	prompt_keys = "费用日期、名称、单据类型、金额、总额、数量、单价、单位。"
-	prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、单据类型、单位为字符串。"
-	category_instruction = ""
-	if category_hierarchy:
-		prompt_keys = "费用日期、名称、单据类型、报销类型、金额、总额、数量、单价、单位。"
-		prompt_value_note = "键含义：费用日期为 YYYY-MM-DD；金额、总额、数量、单价为数字；名称、单据类型、报销类型、单位为字符串。"
-		category_instruction = (
-			f"\n【分类层级参考】\n{category_hierarchy}\n\n"
-			"【分类要求】你必须根据票据内容，从上述层级结构中选择最匹配的一项作为「报销类型」，原样返回类型名，不得自造新类型。\n"
-			"注意：返回的「报销类型」必须是上面列出的某个具体类型（横线后面的名称），不要返回大类名称。\n"
-			"若无法判断或不在列表中，请返回「无法识别」。\n"
-			"分类模式下只返回一个 JSON 对象，不要返回「明细列表」数组。"
-		)
+	cfg = get_receipt_ai_config()
+	va = cfg.get("vision_api") or {}
+	media = cfg.get("media") or {}
+	pd = cfg.get("payload_defaults") or {}
 
 	is_pdf = file_type == "pdf"
-	doc_word = "PDF 文件" if is_pdf else "照片"
+	doc_word = "PDF 文件" if is_pdf else "图片"
+	prompt = build_receipt_vision_prompt(cfg, doc_word, category_hierarchy or None)
 
-	prompt = (
-		f"请识别这张报销单据{doc_word}，并仅返回一个 JSON 对象（不要 markdown，不要代码块）。\n"
-		f"【强制】JSON 的键名必须全部使用中文，且只能使用下列键（不要出现英文键名）：\n{prompt_keys}\n"
-		f"{prompt_value_note}\n"
-		"【识别顺序要求】请严格分两步执行：\n"
-		"第 1 步先识别票面属性：单据类型、费用日期、总额。\n"
-		"第 2 步再识别内容明细：单位、数量、单价、金额。\n"
-		"若明细有多行，请按行写入「明细列表」数组；票面属性可在顶层给出，并在每行中按需补充。\n"
-		"如果单据里有多个可分开的项目，请额外返回「明细列表」，其值为数组；数组中的每一项都使用同一套中文键。\n"
-		"如果只有一个项目，可以不返回「明细列表」，或者返回只有一项的数组。\n"
-		"请优先保证单据类型、日期、总额准确，其次再补全单位、数量、单价、金额与名称。\n"
-		"请尽量从票面读取「数量」「单价」；若只有「金额」和「数量」而没有「单价」，用金额÷数量推算「单价」（保留合理小数）。\n"
-		"若只有「金额」和「单价」而没有「数量」，用金额÷单价推算「数量」。\n"
-		"「单位」填计量单位（如次、个、天、公里、小时）；认不出时数量填 1，单价或金额可填 0，说明可填空字符串。"
-		f"{category_instruction}"
-	)
-
-	# 统一使用 OpenAI 兼容格式（TokenHub / Kimi 视觉模型）
 	if "," in image_base64:
 		pure_base64 = image_base64.split(",")[1]
 	else:
 		pure_base64 = image_base64
 
-	image_url = f"data:image/jpeg;base64,{pure_base64}"
+	if is_pdf:
+		mime = str(media.get("pdf_data_url_mime") or "application/pdf").strip()
+	else:
+		mime = str(media.get("image_data_url_mime") or "image/jpeg").strip()
+	image_url = f"data:{mime};base64,{pure_base64}"
+
+	resolved_model = (model or "").strip() or str(va.get("model_default") or "").strip()
+	if not resolved_model:
+		frappe.throw("未配置视觉识别模型：请在 receipt_recognition.json 的 vision_api.model_default 或请求参数 model 中设置")
+
+	endpoint = (server_url or "").strip() or str(va.get("endpoint") or "").strip()
+	if not endpoint:
+		frappe.throw(
+			"未配置视觉识别远程地址 vision_api.endpoint（项目根目录 receipt_recognition.json 或站点 receipt_recognition / hunyuan_endpoint）"
+		)
+
+	headers = vision_http_headers(cfg)
+	if "Authorization" not in headers:
+		frappe.throw(
+			"未配置 vision_api.api_key（项目根目录 receipt_recognition.json、站点 receipt_recognition.vision_api.api_key 或兼容项 hunyuan_api_key）"
+		)
+
+	timeout = int(va.get("timeout_seconds") or 120)
+	temperature = float(va.get("temperature") if va.get("temperature") is not None else 0.2)
+	stream = bool(pd.get("stream")) if "stream" in pd else False
+
 	payload = {
-		"model": "kimi-k2.6",
+		"model": resolved_model,
 		"messages": [
 			{
 				"role": "user",
 				"content": [
 					{"type": "text", "text": prompt},
-					{"type": "image_url", "image_url": {"url": image_url}}
-				]
+					{"type": "image_url", "image_url": {"url": image_url}},
+				],
 			}
 		],
-		"temperature": 1.0,
-		"stream": False
+		"temperature": temperature,
+		"stream": stream,
 	}
 	payload_str = json.dumps(payload, ensure_ascii=False)
 
-	api_key = (frappe.conf.get("hunyuan_api_key") or "").strip() or "sk-JIG9RZUiVnJZ3KxJCUIFTbFQA1GXRRjmWCHSBKwuGKyioOCg"
-	endpoint = (frappe.conf.get("hunyuan_endpoint") or "").strip() \
-			   or "https://tokenhub.tencentmaas.com/v1/chat/completions"
-
-	headers = {"Content-Type": "application/json; charset=utf-8"}
-	if api_key:
-		headers["Authorization"] = f"Bearer {api_key}"
-
 	try:
-		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=120)
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=timeout)
 		response.raise_for_status()
 		res_data = response.json()
 
 		try:
 			content = res_data["choices"][0]["message"]["content"]
-			# 尝试提取 markdown 代码块中的 JSON
-			json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", content)
-			if json_match:
-				content = json_match.group(1).strip()
-			return json.loads(content)
+			parsed = _parse_json_from_model_content(content)
+			if isinstance(parsed, list):
+				if parsed and all(isinstance(x, dict) for x in parsed):
+					parsed = {"detail_list": parsed}
+				else:
+					frappe.throw("视觉模型返回的 JSON 数组格式无效")
+			if not isinstance(parsed, dict):
+				frappe.throw("视觉模型应返回 JSON 对象或明细对象数组")
+			return parsed
 		except (KeyError, IndexError, ValueError) as e:
 			frappe.log_error(f"Vision Model Parsing Error: {e}\nRaw: {res_data}", "Receipt Recognition Failure")
 			frappe.throw("视觉模型返回内容解析失败：" + str(e))
