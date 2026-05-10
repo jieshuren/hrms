@@ -2303,9 +2303,647 @@ def get_mobile_procurement_doc_detail(doctype: str, name: str) -> dict:
 				"Supplier", s.supplier, ["supplier_name", "email_id"], as_dict=True
 			) or {}
 			result["suppliers_info"].append({
-				"supplier": s.supplier,
-				"supplier_name": info.get("supplier_name") or s.supplier,
-				"email_id": s.email_id or info.get("email_id") or "",
-			})
+			"supplier": s.supplier,
+			"supplier_name": info.get("supplier_name") or s.supplier,
+			"email_id": s.email_id or info.get("email_id") or "",
+		})
 
 	return result
+
+
+# ============================================================
+# Receipt Recognition & Expense AI (mobile / mini-program only)
+# ============================================================
+
+@frappe.whitelist(methods=["POST"])
+def classify_expense_text(text_content: str, category_hierarchy: str, model: str | None = None) -> dict:
+	"""
+	Based on pure text content, classify expenses using AI. No image needed, faster and cheaper.
+	Config: receipt_recognition.json (text_classification section).
+	"""
+	import json
+	import requests as http_requests
+	from requests.exceptions import RequestException
+
+	from hrms.receipt_recognition_settings import (
+		build_classification_prompt,
+		classification_http_headers,
+		get_receipt_ai_config,
+	)
+
+	if not text_content:
+		return {"报销类型": "无法识别"}
+
+	cfg = get_receipt_ai_config()
+	tc = cfg.get("text_classification") or {}
+	va = cfg.get("vision_api") or {}
+	fallback = (
+		tc.get("fallback_response")
+		if isinstance(tc.get("fallback_response"), dict)
+		else {"报销类型": "无法识别"}
+	)
+
+	endpoint = str(tc.get("endpoint") or va.get("endpoint") or "").strip()
+	if not endpoint:
+		return fallback
+
+	headers = classification_http_headers(cfg)
+	if "Authorization" not in headers:
+		return fallback
+
+	ai_model = (model or "").strip() or str(tc.get("model_default") or "hy3-preview").strip()
+	prompt = build_classification_prompt(cfg, text_content, category_hierarchy)
+
+	payload = {
+		"model": ai_model,
+		"messages": [{"role": "user", "content": prompt}],
+		"temperature": float(tc.get("temperature") if tc.get("temperature") is not None else 0.1),
+		"stream": False,
+	}
+	if tc.get("use_response_format_json_object"):
+		payload["response_format"] = {"type": "json_object"}
+	payload_str = json.dumps(payload, ensure_ascii=False)
+
+	timeout = int(tc.get("timeout_seconds") or 30)
+
+	try:
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=timeout)
+		response.raise_for_status()
+		res_data = response.json()
+		content = res_data["choices"][0]["message"]["content"]
+		return json.loads(content)
+	except Exception as e:
+		frappe.log_error(f"Classification Error: {e}", "Expense Classification Failure")
+		return fallback
+
+
+def _extract_braced_json_fragments(text: str) -> list:
+	"""Extract outermost {...} JSON fragments from text that may contain prefixes/suffixes."""
+	result = []
+	start = -1
+	depth = 0
+	in_string = False
+	escape = False
+	for i, ch in enumerate(text):
+		if in_string:
+			if escape:
+				escape = False
+				continue
+			if ch == "\\":
+				escape = True
+				continue
+			if ch == '"':
+				in_string = False
+			continue
+		if ch == '"':
+			in_string = True
+			continue
+		if ch == "{":
+			if depth == 0:
+				start = i
+			depth += 1
+			continue
+		if ch == "}":
+			if depth <= 0:
+				continue
+			depth -= 1
+			if depth == 0 and start >= 0:
+				result.append(text[start : i + 1])
+				start = -1
+	return result
+
+
+def _parse_json_from_model_content(content) -> dict | list:
+	"""Parse vision model message.content: full JSON, markdown code block, or JSON object in text."""
+	import json
+	import re
+
+	if content is None:
+		raise ValueError("empty content")
+	s = str(content).strip()
+	m = re.search(r"```(?:json)?\s*([\s\S]*?)```", s, flags=re.IGNORECASE)
+	if m:
+		s = m.group(1).strip()
+	try:
+		return json.loads(s)
+	except ValueError:
+		pass
+	for frag in _extract_braced_json_fragments(s):
+		try:
+			obj = json.loads(frag)
+			if isinstance(obj, (dict, list)):
+				return obj
+		except ValueError:
+			continue
+	raise ValueError("模型返回内容中未找到有效 JSON")
+
+
+def _do_recognize_receipt(image_base64, file_type="image", model=None, server_url=None, category_hierarchy=None):
+	"""Shared recognition logic, called by recognize_receipt_image and recognize_receipt_file."""
+	import json
+	import requests as http_requests
+	from requests.exceptions import RequestException
+
+	from hrms.receipt_recognition_settings import (
+		build_receipt_vision_prompt,
+		get_receipt_ai_config,
+		vision_http_headers,
+	)
+
+	if not image_base64:
+		frappe.throw("识别请求失败：未收到数据")
+
+	cfg = get_receipt_ai_config()
+	va = cfg.get("vision_api") or {}
+	media = cfg.get("media") or {}
+	pd = cfg.get("payload_defaults") or {}
+
+	is_pdf = file_type == "pdf"
+	doc_word = "PDF 文件" if is_pdf else "图片"
+	prompt = build_receipt_vision_prompt(cfg, doc_word, category_hierarchy or None)
+
+	if "," in image_base64:
+		pure_base64 = image_base64.split(",")[1]
+	else:
+		pure_base64 = image_base64
+
+	if is_pdf:
+		mime = str(media.get("pdf_data_url_mime") or "application/pdf").strip()
+	else:
+		mime = str(media.get("image_data_url_mime") or "image/jpeg").strip()
+	image_url = f"data:{mime};base64,{pure_base64}"
+
+	resolved_model = (model or "").strip() or str(va.get("model_default") or "").strip()
+	if not resolved_model:
+		frappe.throw("未配置视觉识别模型：请在 receipt_recognition.json 的 vision_api.model_default 或请求参数 model 中设置")
+
+	endpoint = (server_url or "").strip() or str(va.get("endpoint") or "").strip()
+	if not endpoint:
+		frappe.throw(
+			"未配置视觉识别远程地址 vision_api.endpoint（项目根目录 receipt_recognition.json 或站点 receipt_recognition / hunyuan_endpoint）"
+		)
+
+	headers = vision_http_headers(cfg)
+	if "Authorization" not in headers:
+		frappe.throw(
+			"未配置 vision_api.api_key（项目根目录 receipt_recognition.json、站点 receipt_recognition.vision_api.api_key 或兼容项 hunyuan_api_key）"
+		)
+
+	timeout = int(va.get("timeout_seconds") or 120)
+	temperature = float(va.get("temperature") if va.get("temperature") is not None else 0.2)
+	stream = bool(pd.get("stream")) if "stream" in pd else False
+
+	payload = {
+		"model": resolved_model,
+		"messages": [
+			{
+				"role": "user",
+				"content": [
+					{"type": "text", "text": prompt},
+					{"type": "image_url", "image_url": {"url": image_url}},
+				],
+			}
+		],
+		"temperature": temperature,
+		"stream": stream,
+	}
+	payload_str = json.dumps(payload, ensure_ascii=False)
+
+	try:
+		response = http_requests.post(endpoint, headers=headers, data=payload_str.encode("utf-8"), timeout=timeout)
+		response.raise_for_status()
+		res_data = response.json()
+
+		try:
+			content = res_data["choices"][0]["message"]["content"]
+			parsed = _parse_json_from_model_content(content)
+			if isinstance(parsed, list):
+				if parsed and all(isinstance(x, dict) for x in parsed):
+					parsed = {"detail_list": parsed}
+				else:
+					frappe.throw("视觉模型返回的 JSON 数组格式无效")
+			if not isinstance(parsed, dict):
+				frappe.throw("视觉模型应返回 JSON 对象或明细对象数组")
+			return parsed
+		except (KeyError, IndexError, ValueError) as e:
+			frappe.log_error(f"Vision Model Parsing Error: {e}\nRaw: {res_data}", "Receipt Recognition Failure")
+			frappe.throw("视觉模型返回内容解析失败：" + str(e))
+
+	except RequestException as exc:
+		frappe.throw(f"连接视觉识别服务失败：{exc}")
+
+
+def _generate_pdf_thumbnail(file_data, width=300):
+	"""Render the first page of a PDF as a JPEG thumbnail, return base64 string."""
+	import base64
+	import io
+
+	try:
+		import fitz
+	except ImportError:
+		frappe.log_error("PyMuPDF (fitz) 未安装，无法生成 PDF 缩略图", "PDF Thumbnail")
+		return ""
+
+	try:
+		doc = fitz.open(stream=file_data, filetype="pdf")
+		if not doc.page_count:
+			doc.close()
+			frappe.log_error("PDF 文件无页面", "PDF Thumbnail")
+			return ""
+		page = doc.load_page(0)
+		zoom = width / (page.rect.width or 612)
+		mat = fitz.Matrix(zoom, zoom)
+		pix = page.get_pixmap(matrix=mat)
+		img_bytes = pix.tobytes("jpeg")
+		doc.close()
+		thumbnail = base64.b64encode(img_bytes).decode("utf-8")
+		return thumbnail
+	except Exception as e:
+		frappe.log_error(f"PDF 缩略图生成失败: {e}", "PDF Thumbnail")
+		return ""
+
+
+@frappe.whitelist()
+def get_pdf_thumbnail(file_url):
+	"""Generate and return base64 thumbnail for the first page of an uploaded PDF file."""
+	import base64
+	import os
+
+	if not file_url:
+		frappe.throw("缺少 file_url 参数")
+
+	file_url = str(file_url).strip()
+	if file_url.startswith(("http://", "https://")):
+		import requests as http_requests
+		try:
+			resp = http_requests.get(file_url, timeout=15)
+			resp.raise_for_status()
+			file_data = resp.content
+		except Exception:
+			frappe.throw("无法下载文件")
+	else:
+		file_path = frappe.get_site_path("public", file_url.lstrip("/"))
+		if not os.path.exists(file_path):
+			private_path = frappe.get_site_path("private", file_url.lstrip("/"))
+			if os.path.exists(private_path):
+				file_path = private_path
+			else:
+				frappe.throw("文件不存在")
+		with open(file_path, "rb") as f:
+			file_data = f.read()
+
+	thumbnail = _generate_pdf_thumbnail(file_data)
+	if not thumbnail:
+		frappe.throw("无法生成 PDF 缩略图")
+	return {"thumbnail_base64": thumbnail}
+
+
+@frappe.whitelist(methods=["POST"])
+def recognize_receipt_image(**kwargs):
+	"""
+	AI receipt recognition via backend proxy (image as base64).
+	Config: receipt_recognition.json. Use recognize_receipt_file for PDF uploads.
+	"""
+	image_base64 = kwargs.get("image_base64")
+	model = kwargs.get("model")
+	server_url = kwargs.get("server_url")
+	category_hierarchy = kwargs.get("category_hierarchy")
+	file_type = kwargs.get("file_type") or "image"
+
+	if not image_base64:
+		frappe.throw("识别请求失败：未收到图片数据 (image_base64)")
+
+	return _do_recognize_receipt(image_base64, file_type, model, server_url, category_hierarchy)
+
+
+@frappe.whitelist(methods=["POST"])
+def recognize_receipt_file(**kwargs):
+	"""
+	File upload-based receipt recognition (mainly for PDFs).
+	Solves the issue of large base64 payloads exceeding request body limits.
+	"""
+	import base64
+	import json
+
+	from frappe.handler import ALLOWED_MIMETYPES
+
+	file_type = kwargs.get("file_type") or "image"
+	model = kwargs.get("model")
+	server_url = kwargs.get("server_url")
+	category_hierarchy = kwargs.get("category_hierarchy")
+
+	uploaded = frappe.request.files.get("file")
+	if not uploaded:
+		frappe.throw("未收到文件")
+
+	filename = uploaded.filename or ""
+	content_type = uploaded.content_type or ""
+
+	if content_type and content_type not in ALLOWED_MIMETYPES:
+		frappe.throw(f"不支持的文件类型：{content_type}")
+
+	file_data = uploaded.stream.read()
+	if not file_data:
+		frappe.throw("文件内容为空")
+
+	pure_base64 = base64.b64encode(file_data).decode("utf-8")
+
+	if content_type == "application/pdf":
+		file_type = "pdf"
+
+	result = _do_recognize_receipt(pure_base64, file_type, model, server_url, category_hierarchy)
+
+	if file_type == "pdf":
+		thumbnail_base64 = _generate_pdf_thumbnail(file_data)
+		if isinstance(result, dict):
+			result["thumbnail_base64"] = thumbnail_base64 or ""
+		elif isinstance(result, str):
+			try:
+				parsed = json.loads(result)
+				parsed["thumbnail_base64"] = thumbnail_base64 or ""
+				result = parsed
+			except Exception:
+				result = {"message": result, "thumbnail_base64": thumbnail_base64 or ""}
+
+	return result
+
+
+@frappe.whitelist()
+def withdraw_expense_claim_to_draft(name: str):
+	"""Withdraw a pending expense claim back to draft for the applicant to edit and resubmit."""
+	if not name:
+		frappe.throw("缺少报销单编号")
+
+	doc = frappe.get_doc("Expense Claim", name)
+	doc.check_permission("write")
+
+	if frappe.session.user != "Administrator" and doc.owner != frappe.session.user:
+		frappe.throw("只有单据创建人可以撤回修改")
+
+	if getattr(doc, "docstatus", 0) != 0:
+		frappe.throw("只有未入账的待审批报销单才能撤回修改")
+
+	if getattr(doc, "custom_related_journal_entry", None) or getattr(doc, "custom_related_payment_entry", None):
+		frappe.throw("该单据已关联财务凭证，无法撤回修改")
+
+	values = {
+		"workflow_state": "Draft",
+		"approval_status": "Draft",
+		"custom_peer_verifier": "",
+		"custom_peer_verified_on": None,
+		"custom_dept_head_approver": "",
+		"custom_dept_head_approved_on": None,
+		"custom_finance_approver": "",
+		"custom_finance_approved_on": None,
+		"custom_gm_approver": "",
+		"custom_gm_approved_on": None,
+	}
+	frappe.db.set_value("Expense Claim", name, values, update_modified=True)
+
+	from frappe.workflow.doctype.workflow_action.workflow_action import clear_workflow_actions
+
+	clear_workflow_actions("Expense Claim", name)
+	frappe.db.commit()
+
+	return frappe.get_doc("Expense Claim", name).as_dict()
+
+
+@frappe.whitelist(methods=["POST"])
+def update_expense_claim_detail_type(claim_name: str, detail_name: str, expense_type: str) -> dict:
+	"""Before finance approval, allow finance approver to correct expense classification of a detail line."""
+	claim_name = (claim_name or "").strip()
+	detail_name = (detail_name or "").strip()
+	expense_type = (expense_type or "").strip()
+	if not claim_name or not detail_name or not expense_type:
+		frappe.throw("参数不完整")
+
+	claim = frappe.get_doc("Expense Claim", claim_name)
+	claim.check_permission("write")
+	if getattr(claim, "docstatus", 0) != 0:
+		frappe.throw("仅未提交单据允许修改分类")
+	if (getattr(claim, "workflow_state", "") or "").strip() != "Pending Finance Approval":
+		frappe.throw("仅待财务审核阶段允许修改分类")
+	if "Finance Approver" not in frappe.get_roles(frappe.session.user):
+		frappe.throw("仅财务审批人允许修改分类")
+	if not frappe.db.exists("Expense Claim Type", expense_type):
+		frappe.throw("费用分类不存在")
+
+	target_row = None
+	for row in claim.get("expenses") or []:
+		if row.name == detail_name:
+			target_row = row
+			break
+	if not target_row:
+		frappe.throw("未找到对应的报销明细")
+
+	target_row.expense_type = expense_type
+	target_row.default_account = None
+	claim.set_expense_account(validate=False)
+	claim.calculate_total_amount()
+	claim.calculate_taxes()
+	claim.flags.skip_ai_category_classification = True
+	claim.save()
+	claim.publish_update()
+
+	return {"name": claim.name, "detail_name": detail_name, "expense_type": expense_type}
+
+
+@frappe.whitelist(methods=["POST"])
+def reclassify_expense_claim_detail_type_by_ai(claim_name: str, detail_name: str) -> dict:
+	"""Before finance approval, run AI re-classification on a single expense detail line."""
+	claim_name = (claim_name or "").strip()
+	detail_name = (detail_name or "").strip()
+	if not claim_name or not detail_name:
+		frappe.throw("参数不完整")
+
+	claim = frappe.get_doc("Expense Claim", claim_name)
+	claim.check_permission("write")
+	if getattr(claim, "docstatus", 0) != 0:
+		frappe.throw("仅未提交单据允许重新分类")
+	if (getattr(claim, "workflow_state", "") or "").strip() != "Pending Finance Approval":
+		frappe.throw("仅待财务审核阶段允许重新分类")
+	if "Finance Approver" not in frappe.get_roles(frappe.session.user):
+		frappe.throw("仅财务审批人允许重新分类")
+
+	target_row = None
+	for row in claim.get("expenses") or []:
+		if row.name == detail_name:
+			target_row = row
+			break
+	if not target_row:
+		frappe.throw("未找到对应的报销明细")
+
+	allowed_types = [
+		row.name
+		for row in frappe.get_all("Expense Claim Type", fields=["name"])
+		if (row.name or "").strip() != "无法识别"
+	]
+	if not allowed_types:
+		frappe.throw("未配置报销分类")
+
+	from hrms.api import get_expense_claim_type_category_map
+
+	type_category_map = get_expense_claim_type_category_map(claim.company)
+	grouped: dict[str, list[str]] = {}
+	for expense_type in allowed_types:
+		category = type_category_map.get(expense_type) or "无法识别"
+		grouped.setdefault(category, []).append(expense_type)
+
+	lines = ["【可选报销类型层级结构】"]
+	for category, types in grouped.items():
+		lines.append(f"- {category}:")
+		for expense_type in types:
+			lines.append(f"  - {expense_type}")
+	hierarchy_text = "\n".join(lines)
+
+	text_to_classify = f"单据名称: {target_row.custom_receipt_item_name or ''}, 说明: {target_row.description or ''}"
+	if not text_to_classify.replace("单据名称: , 说明: ", "").strip():
+		frappe.throw("该条明细缺少可用于分类的文本内容")
+
+	response = classify_expense_text(
+		text_content=text_to_classify,
+		category_hierarchy=hierarchy_text,
+	)
+	predicted_type = str((response or {}).get("报销类型") or "").strip()
+	if not predicted_type or predicted_type == "无法识别":
+		frappe.throw("AI 未识别出有效分类，请手动选择")
+	if predicted_type not in allowed_types:
+		frappe.throw("AI 返回的分类不在可选范围内，请手动选择")
+
+	target_row.expense_type = predicted_type
+	target_row.default_account = None
+	claim.set_expense_account(validate=False)
+	claim.calculate_total_amount()
+	claim.calculate_taxes()
+	claim.flags.skip_ai_category_classification = True
+	claim.save()
+	claim.publish_update()
+
+	return {"name": claim.name, "detail_name": detail_name, "expense_type": predicted_type}
+
+
+@frappe.whitelist()
+def sync_bank_accounts_to_mop():
+	"""Sync bank accounts from chart of accounts to generate Chinese-mode-of-payment entries."""
+	company = frappe.db.get_single_value("Global Defaults", "default_company")
+	if not company:
+		return "未找到默认公司"
+
+	# 1. Localize common payment modes
+	translations = {
+		"Wire Transfer": "银行转账",
+		"Cash": "现金支付",
+		"Credit Card": "信用卡",
+		"Check": "支票"
+	}
+	for old_name, new_name in translations.items():
+		if frappe.db.exists("Mode of Payment", old_name):
+			frappe.rename_doc("Mode of Payment", old_name, new_name, force=True, merge=True)
+
+	# 2. Sync from accounts
+	bank_accounts = frappe.get_all("Account",
+		filters={"account_type": ["in", ["Bank", "Cash"]], "is_group": 0, "company": company},
+		fields=["name", "account_type", "account_name"]
+	)
+
+	results = []
+	for acc in bank_accounts:
+		raw_name = acc.account_name
+		clean_name = raw_name.split(" - ")[1] if " - " in raw_name else raw_name
+		clean_name = clean_name.replace(" - 华烁", "").strip()
+
+		if not frappe.db.exists("Mode of Payment", clean_name):
+			doc = frappe.new_doc("Mode of Payment")
+			doc.mode_of_payment = clean_name
+			doc.type = acc.account_type
+			doc.enabled = 1
+			doc.insert(ignore_permissions=True)
+
+		mop_doc = frappe.get_doc("Mode of Payment", clean_name)
+		mop_doc.set("accounts", [])
+		mop_doc.append("accounts", {
+			"company": company,
+			"default_account": acc.name
+		})
+		mop_doc.save(ignore_permissions=True)
+		results.append(f"{clean_name} -> {acc.name}")
+
+	frappe.db.commit()
+	return results
+
+
+@frappe.whitelist()
+def get_cashier_modes_of_payment(company: str | None = None) -> list[dict]:
+	"""Get available payment modes with their linked accounts for cashier."""
+	if not company:
+		company = frappe.db.get_single_value("Global Defaults", "default_company")
+
+	mops = frappe.get_all(
+		"Mode of Payment",
+		filters={"enabled": 1},
+		fields=["name", "type"],
+		order_by="name asc"
+	)
+
+	res = []
+	for mop in mops:
+		account = frappe.db.get_value("Mode of Payment Account",
+			{"parent": mop.name, "company": company},
+			"default_account"
+		)
+		res.append({
+			"name": mop.name,
+			"type": mop.type,
+			"account": account or ""
+		})
+	return res
+
+
+@frappe.whitelist(methods=["POST"])
+def confirm_expense_claim_payment(claim_name: str, mop: str, advances: list | str = None, action: str = None) -> dict:
+	"""Cashier confirms payment: update payment method, advance deductions, and execute workflow action."""
+	if isinstance(advances, str) and advances.strip():
+		try:
+			advances = json.loads(advances)
+		except Exception:
+			advances = []
+
+	if not advances or not isinstance(advances, list):
+		advances = []
+
+	doc = frappe.get_doc("Expense Claim", claim_name)
+
+	# Permission check
+	user_roles = frappe.get_roles(frappe.session.user)
+	allowed_roles = ["Cashier", "Administrator", "Finance Approver", "出纳", "财务人员", "财务审核"]
+
+	has_permission = any(role in user_roles for role in allowed_roles)
+
+	if not has_permission:
+		frappe.logger().warning(f"Permission Denied for {frappe.session.user}: Roles found {user_roles}")
+		frappe.throw("只有出纳或财务人员允许执行此操作", frappe.PermissionError)
+
+	# 1. Update payment method fields
+	doc.custom_cashier_mode_of_payment = mop
+	doc.custom_cashier_user = frappe.session.user
+	doc.custom_paid_on = frappe.utils.now_datetime()
+
+	# 2. Update advances child table
+	doc.set("advances", [])
+	for row in advances:
+		if not row.get("employee_advance"):
+			continue
+		doc.append("advances", {
+			"employee_advance": row.get("employee_advance"),
+			"allocated_amount": row.get("allocated_amount"),
+			"advance_amount": row.get("advance_amount"),
+			"unclaimed_amount": row.get("unclaimed_amount")
+		})
+
+	# 3. Execute workflow action
+	doc.flags.ignore_validate_update_after_submit = True
+
+	from frappe.workflow.doctype.workflow_action.workflow_action import apply_workflow
+	apply_workflow(doc, action)
+
+	return {"name": doc.name, "workflow_state": doc.workflow_state}
