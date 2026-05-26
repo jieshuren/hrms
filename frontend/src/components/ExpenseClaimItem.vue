@@ -20,7 +20,7 @@
 			</div>
 		</template>
 		<template #right>
-			<Badge variant="outline" :theme="statusMap[status]" :label="__(status, null, 'Expense Claim')" size="md" />
+			<Badge variant="outline" :theme="statusMap[status]" :label="labelStatusMap[status] || status" size="md" />
 			<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
 		</template>
 	</ListItem>
@@ -51,6 +51,19 @@ const props = defineProps({
 	},
 })
 
+const labelStatusMap = {
+	Draft: "草稿",
+	Submitted: "已提交",
+	Cancelled: "已取消",
+	Paid: "已支付",
+	Unpaid: "未支付",
+	Approved: "已批准",
+	Rejected: "已拒绝",
+	"Approved & Draft": "已批准 & 草稿",
+	"Approved & Unpaid": "已批准 & 未支付",
+	"Approved & Submitted": "已批准 & 已提交",
+}
+
 const statusMap = {
 	Draft: "gray",
 	Submitted: "blue",
@@ -80,7 +93,7 @@ const status = computed(() => {
 const claimTitle = computed(() => {
 	let title = __(props.doc.expense_type)
 	if (props.doc.total_expenses > 1) {
-		title = __("{0} & {1} more", [title, props.doc.total_expenses - 1])
+		title = title + ' 等' + (props.doc.total_expenses - 1) + '项'
 	}
 	return title
 })

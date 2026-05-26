@@ -19,10 +19,7 @@
 							<div class="text-xs font-normal text-gray-500">
 								<span>
 									{{
-										__("{0}: {1}", [
-											__("Sanctioned"),
-											formatCurrency(item.sanctioned_amount || 0, doc.currency),
-										])
+										'核准: ' + formatCurrency(item.sanctioned_amount || 0, doc.currency)
 									}}
 								</span>
 								<span class="whitespace-pre"> &middot; </span>

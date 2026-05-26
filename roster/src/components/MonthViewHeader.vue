@@ -14,7 +14,7 @@
 			<div v-for="[key, value] of Object.entries(filters)" :key="key" class="w-40">
 				<FormControl
 					type="autocomplete"
-					:placeholder="toTitleCase(key)"
+					:placeholder="getFilterLabel(key)"
 					:options="value.options"
 					v-model="value.model"
 					:disabled="!value.options.length"
@@ -86,11 +86,22 @@ watch(filters, (val) => {
 	emit("updateFilters", newFilters);
 });
 
+const filterLabelMap: Record<string, string> = {
+	company: "公司",
+	department: "部门",
+	branch: "分支",
+	designation: "职位",
+	shift_type: "班次类型",
+	shift_location: "班次地点",
+};
+
 const toTitleCase = (str: string) =>
 	str
 		.split("_")
 		.map((s) => s.charAt(0).toUpperCase() + s.slice(1))
 		.join(" ");
+
+const getFilterLabel = (key: string) => filterLabelMap[key] || toTitleCase(key);
 
 // RESOURCES
 

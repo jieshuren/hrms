@@ -3,7 +3,7 @@
 		<template #left>
 			<FeatherIcon name="clock" class="h-5 w-5 text-gray-500" />
 			<div class="flex flex-col items-start gap-1.5">
-				<div class="text-base font-normal text-gray-800">Log Type: {{ props.doc.log_type }}</div>
+				<div class="text-base font-normal text-gray-800">{{ props.doc.log_type === 'IN' ? '签到' : (props.doc.log_type === 'OUT' ? '签退' : props.doc.log_type) }}</div>
 				<div class="text-xs font-normal text-gray-500">
 					<span>{{ formatTimestamp(props.doc.time) }}</span>
 				</div>

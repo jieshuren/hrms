@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Employee Advance"
-			:pageTitle="__('Employee Advances')"
+			:pageTitle="'员工预付款'"
 			:tabButtons="TAB_BUTTONS"
 			:fields="EMPLOYEE_ADVANCE_FIELDS"
 			:filterConfig="FILTER_CONFIG"
@@ -16,7 +16,7 @@ import ListView from "@/components/ListView.vue"
 import { inject } from "vue"
 
 const __ = inject("$translate")
-const TAB_BUTTONS = ["My Advances", "Team Advances"] // __("My Advances"), __("Team Advances")
+const TAB_BUTTONS = ["我的预付款", "团队预付款"]
 const EMPLOYEE_ADVANCE_FIELDS = [
 	"name",
 	"employee",
@@ -39,32 +39,32 @@ const STATUS_FILTER_OPTIONS = [
 	"Returned",
 	"Partly Claimed and Returned",
 	"Cancelled",
-] // __("Draft"), __("Paid"), __("Unpaid"), __("Claimed"), __("Returned"), __("Partly Claimed and Returned"), __("Cancelled")
+]
 const FILTER_CONFIG = [
 	{
 		fieldname: "status",
 		fieldtype: "Select",
-		label: __("Status"),
+		label: "状态",
 		options: STATUS_FILTER_OPTIONS,
 	},
 	{
 		fieldname: "employee",
 		fieldtype: "Link",
-		label: __("Employee"),
+		label: "员工",
 		options: "Employee",
 	},
 	{
 		fieldname: "department",
 		fieldtype: "Link",
-		label: __("Department"),
+		label: "部门",
 		options: "Department",
 	},
-	{ fieldname: "posting_date", fieldtype: "Date", label: __("Posting Date") },
+	{ fieldname: "posting_date", fieldtype: "Date", label: "提交日期" },
 	{
 		fieldname: "advance_amount",
 		fieldtype: "Currency",
-		label: __("Advance Amount"),
+		label: "预付金额",
 	},
-	{ fieldname: "paid_amount", fieldtype: "Currency", label: __("Paid Amount") },
+	{ fieldname: "paid_amount", fieldtype: "Currency", label: "已付金额" },
 ]
 </script>

@@ -1,13 +1,13 @@
 <template>
 	<div class="flex flex-col gap-5 w-full">
 		<div class="flex flex-row justify-between items-center">
-			<div class="text-lg text-gray-800 font-bold">{{ __("Upcoming Holidays") }}</div>
+			<div class="text-lg text-gray-800 font-bold">即将到来的假期</div>
 			<div
 				v-if="holidays?.data?.length"
 				id="open-holiday-list"
 				class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
 			>
-				{{ __("View All") }}
+				查看全部
 			</div>
 		</div>
 
@@ -29,7 +29,7 @@
 			</div>
 		</div>
 
-		<EmptyState :message="__('You have no upcoming holidays')" v-else />
+		<EmptyState :message="'您没有即将到来的假期'" v-else />
 	</div>
 
 	<ion-modal
@@ -41,7 +41,7 @@
 	>
 		<div class="bg-white w-full flex flex-col items-center justify-center pb-5">
 			<div class="w-full pt-8 pb-5 border-b text-center">
-				<span class="text-gray-900 font-bold text-lg">{{ __("Holiday List") }}</span>
+				<span class="text-gray-900 font-bold text-lg">假期列表</span>
 			</div>
 			<div class="w-full flex flex-col items-center justify-center gap-5 p-4">
 				<div
@@ -88,7 +88,7 @@ const holidays = createResource({
 		return data.map((holiday) => {
 			const holidayDate = dayjs(holiday.holiday_date)
 			holiday.is_upcoming = holidayDate.isAfter(dayjs())
-			holiday.formatted_holiday_date = holidayDate.format("ddd, D MMM YYYY")
+			holiday.formatted_holiday_date = holidayDate.format("YYYY年M月D日")
 			return holiday
 		})
 	},

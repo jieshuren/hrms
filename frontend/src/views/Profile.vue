@@ -14,7 +14,7 @@
 							>
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Profile") }}</h2>
+							<h2 class="text-xl font-semibold text-gray-900">{{ "个人资料" }}</h2>
 						</div>
 					</header>
 
@@ -84,7 +84,7 @@
 											class="h-5 w-5 text-gray-500"
 										/>
 										<div class="text-base font-normal text-gray-800">
-											{{ __("Settings") }}
+											{{ "设置" }}
 										</div>
 									</div>
 									<FeatherIcon
@@ -104,7 +104,7 @@
 							<template #prefix>
 								<FeatherIcon name="log-out" class="w-4" />
 							</template>
-							{{ __("Log Out") }}
+							{{ "退出登录" }}
 						</Button>
 					</div>
 				</div>
@@ -162,7 +162,7 @@ const router = useRouter()
 const profileLinks = [
 	{
 		icon: "user",
-		title: __("Employee Details"),
+		title: "员工详情",
 		fields: [
 			"employee_name",
 			"employee_number",
@@ -174,7 +174,7 @@ const profileLinks = [
 	},
 	{
 		icon: "file",
-		title: __("Company Information"),
+		title: "公司信息",
 		fields: [
 			"company",
 			"department",
@@ -187,7 +187,7 @@ const profileLinks = [
 	},
 	{
 		icon: "book",
-		title: __("Contact Information"),
+		title: "联系信息",
 		fields: [
 			"cell_number",
 			"personal_email",
@@ -197,7 +197,7 @@ const profileLinks = [
 	},
 	{
 		icon: "dollar-sign",
-		title: __("Salary Information"),
+		title: "薪资信息",
 		fields: [
 			"ctc",
 			"payroll_cost_center",
@@ -260,7 +260,7 @@ const logout = async () => {
 	try {
 		await session.logout.submit()
 	} catch (e) {
-		const msg = "An error occurred while attempting to log out!"
+		const msg = "退出登录时发生错误！"
 		console.error(msg, e)
 		showErrorAlert(msg)
 	}

@@ -18,7 +18,7 @@
 					<h2
 						class="text-xl font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis"
 					>
-						{{ __(props.doctype) }}
+						{{ doctypeMap[props.doctype] || props.doctype }}
 					</h2>
 					<Badge
 						:label="id"
@@ -27,7 +27,7 @@
 					/>
 					<Badge
 						v-if="status"
-						:label="__(status, null, doctype)"
+						:label="statusMap[status] || status"
 						:theme="statusColor"
 						class="whitespace-nowrap text-[8px]"
 					/>
@@ -36,26 +36,26 @@
 						class="ml-auto"
 						:options="[
 							{
-								label: __('Delete'),
+								label: '删除',
 								condition: showDeleteButton,
 								onClick: () => (showDeleteDialog = true),
 							},
-							{ label: __('Reload'), onClick: () => reloadDoc() },
+							{ label: '重新加载', onClick: () => reloadDoc() },
 							{
-								label: __('Download PDF'),
+								label: '下载PDF',
 								condition: () => props.showDownloadPDFButton,
 								onClick: () => (handleDownload()),
 							},
 						]"
 						:button="{
-							label: __('Menu'),
+							label: '菜单',
 							icon: 'more-horizontal',
 							variant: 'ghost',
 						}"
 					/>
 				</div>
 				<h2 v-else class="text-2xl font-semibold text-gray-900">
-					{{ __('New {0}', [__(doctype)], props.doctype) }}
+					{{ '新建' + (doctypeMap[doctype] || doctype) }}
 				</h2>
 			</header>
 
@@ -77,7 +77,7 @@
 											: 'hover:text-gray-600 hover:border-gray-300',
 									]"
 								>
-									{{ __(tab.name, null, props.doctype) }}
+									{{ tab.name }}
 								</button>
 							</li>
 						</ul>
@@ -101,7 +101,7 @@
 									:fieldname="field.fieldname"
 									v-model="formModel[field.fieldname]"
 									:default="field.default"
-									:label="__(field.label, null, props.doctype)"
+									:label="field.label"
 									:options="field.options"
 									:linkFilters="field.linkFilters"
 									:documentList="field.documentList"
@@ -121,7 +121,7 @@
 								v-if="isFileUploading"
 							>
 								<LoadingIndicator class="w-3 h-3 text-gray-800" />
-								<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+								<span class="text-gray-900 text-sm">上传中... </span>
 							</div>
 
 							<FileUploaderView
@@ -142,7 +142,7 @@
 						:fieldname="field.fieldname"
 						v-model="formModel[field.fieldname]"
 						:default="field.default"
-						:label="__(field.label, null, props.doctype)"
+						:label="field.label"
 						:options="field.options"
 						:linkFilters="field.linkFilters"
 						:documentList="field.documentList"
@@ -160,7 +160,7 @@
 						v-if="isFileUploading"
 					>
 						<LoadingIndicator class="w-3 h-3 text-gray-800" />
-						<span class="text-gray-900 text-sm">{{ __("Uploading...") }} </span>
+						<span class="text-gray-900 text-sm">上传中... </span>
 					</div>
 
 					<FileUploaderView
@@ -212,7 +212,7 @@
 						docList.insert.loading || documentResource?.setValue?.loading
 					"
 				>
-					{{ __(formButton) }}
+					{{ formButtonMap[formButton] || formButton }}
 				</Button>
 			</div>
 		</div>
@@ -221,11 +221,11 @@
 	<!-- Confirmation Dialogs -->
 	<Dialog v-model="showDeleteDialog">
 		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Delete {0}", [__(props.doctype)]) }}</h2>
+			<h2 class="text-xl font-bold">{{ '删除' + (doctypeMap[props.doctype] || props.doctype) }}</h2>
 		</template>
 		<template #body-content>
 			<p>
-				{{ __("Are you sure you want to delete the {0}", [__(props.doctype)])  }}
+				{{ '确定要删除' + (doctypeMap[props.doctype] || props.doctype) }}
 				<span class="font-bold">{{ formModel.name }}</span>
 				?
 			</p>
@@ -237,7 +237,7 @@
 					class="py-5 w-full"
 					@click="showDeleteDialog = false"
 				>
-					{{ __("Cancel") }}
+					取消
 				</Button>
 				<Button
 					variant="solid"
@@ -245,7 +245,7 @@
 					@click="handleDocDelete"
 					class="py-5 w-full"
 				>
-					{{__("Delete") }}
+					删除
 				</Button>
 			</div>
 		</template>
@@ -253,11 +253,11 @@
 
 	<Dialog v-model="showSubmitDialog">
 		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Confirm") }} </h2>
+			<h2 class="text-xl font-bold">确认</h2>
 		</template>
 		<template #body-content>
 			<p>
-				{{ __("Permanently submit {0}", [__(props.doctype)]) }}
+				{{ '确定提交' + (doctypeMap[props.doctype] || props.doctype) }}
 				<span class="font-bold">{{ formModel.name }}</span>
 				?
 			</p>
@@ -269,14 +269,14 @@
 					class="py-5 w-full"
 					@click="showSubmitDialog = false"
 				>
-					{{ __("No") }}
+					否
 				</Button>
 				<Button
 					variant="solid"
 					@click="handleDocUpdate('submit')"
 					class="py-5 w-full"
 				>
-					{{ __("Yes") }}
+					是
 				</Button>
 			</div>
 		</template>
@@ -284,11 +284,11 @@
 
 	<Dialog v-model="showCancelDialog">
 		<template #body-title>
-			<h2 class="text-xl font-bold">{{ __("Confirm") }} </h2>
+			<h2 class="text-xl font-bold">确认</h2>
 		</template>
 		<template #body-content>
 			<p>
-				{{ __("Permanently cancel {0}", [__(props.doctype)]) }}
+				{{ '确定取消' + (doctypeMap[props.doctype] || props.doctype) }}
 				<span class="font-bold">{{ formModel.name }}</span
 				>?
 			</p>
@@ -300,14 +300,14 @@
 					class="py-5 w-full"
 					@click="showCancelDialog = false"
 				>
-					{{ __("No") }}
+					否
 				</Button>
 				<Button
 					variant="solid"
 					@click="handleDocUpdate('cancel')"
 					class="py-5 w-full"
 				>
-					{{ __("Yes") }}
+					是
 				</Button>
 			</div>
 		</template>
@@ -391,6 +391,36 @@ const router = useRouter()
 const { downloadPDF } = useDownloadPDF()
 
 const __ = inject("$translate")
+
+const doctypeMap = {
+	"Leave Application": "请假申请",
+	"Expense Claim": "费用报销",
+	"Employee Advance": "员工预付款",
+	"Attendance Request": "考勤申请",
+	"Shift Request": "班次申请",
+	"Shift Assignment": "排班分配",
+}
+
+const statusMap = {
+	Approved: "已批准",
+	Rejected: "已拒绝",
+	Open: "待审批",
+	Draft: "草稿",
+	Submitted: "已提交",
+	Cancelled: "已取消",
+	Paid: "已支付",
+	Unpaid: "未支付",
+	Claimed: "已报销",
+	Returned: "已归还",
+	Active: "活跃",
+	Inactive: "停用",
+}
+
+const formButtonMap = {
+	Save: "保存",
+	Submit: "提交",
+	Cancel: "取消",
+}
 
 let activeTab = ref(props.tabs?.[0].name)
 let fileAttachments = ref([])
@@ -524,8 +554,8 @@ const docList = createListResource({
 	insert: {
 		async onSuccess(data) {
 			toast({
-				title: __("Success"),
-				text: __("{0} created successfully!", [__(props.doctype)]),
+				title: "成功",
+				text: (doctypeMap[props.doctype] || props.doctype) + '创建成功！',
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -539,8 +569,8 @@ const docList = createListResource({
 		},
 		onError() {
 			toast({
-				title: __("Error"),
-				text: __("Error creating {0}", [__(props.doctype)]),
+				title: "错误",
+				text: '创建' + (doctypeMap[props.doctype] || props.doctype) + '失败',
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -556,8 +586,8 @@ const documentResource = createDocumentResource({
 	setValue: {
 		onSuccess() {
 			toast({
-				title: __("Success"),
-				text: __("{0} updated successfully!", [__(props.doctype)]),
+				title: "成功",
+				text: (doctypeMap[props.doctype] || props.doctype) + '更新成功！',
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -565,8 +595,8 @@ const documentResource = createDocumentResource({
 		},
 		onError() {
 			toast({
-				title: __("Error"),
-				text: __("Error updating {0}", [__(props.doctype)]),
+				title: "错误",
+				text: '更新' + (doctypeMap[props.doctype] || props.doctype) + '失败',
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -578,8 +608,8 @@ const documentResource = createDocumentResource({
 		onSuccess() {
 			router.back()
 			toast({
-				title: __("Success"),
-				text: __("{0} deleted successfully!", [__(props.doctype)]),
+				title: "成功",
+				text: (doctypeMap[props.doctype] || props.doctype) + '删除成功！',
 				icon: "check-circle",
 				position: "bottom-center",
 				iconClasses: "text-green-500",
@@ -587,8 +617,8 @@ const documentResource = createDocumentResource({
 		},
 		onError() {
 			toast({
-				title: __("Error"),
-				text: __("Error deleting {0}", [__(props.doctype)]),
+				title: "错误",
+				text: '删除' + (doctypeMap[props.doctype] || props.doctype) + '失败',
 				icon: "alert-circle",
 				position: "bottom-center",
 				iconClasses: "text-red-500",
@@ -652,8 +682,8 @@ function validateMandatoryFields() {
 		.map((field) => field.label)
 
 	if (errorFields.length) {
-		formErrorMessage.value = `${errorFields.join(", ")} ${
-			errorFields.length > 1 ? "fields are mandatory" : "field is mandatory"
+		formErrorMessage.value = `${errorFields.join("、")}${
+			errorFields.length > 1 ? "为必填项" : "为必填项"
 		}`
 		return false
 	} else {

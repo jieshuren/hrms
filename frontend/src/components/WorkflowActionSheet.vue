@@ -16,7 +16,7 @@
 			<template #prefix>
 				<FeatherIcon name="chevron-up" class="w-4" />
 			</template>
-			{{ __("Actions") }}
+			操作
 		</Button>
 
 		<template v-else>
@@ -108,7 +108,7 @@ const showTransitions = () => {
 	if (actions.value?.length > 0) {
 		// always add last action for dismissing the modal
 		actions.value.push({
-			text: __("Dismiss"),
+			text: "关闭",
 			role: "cancel",
 		})
 	}

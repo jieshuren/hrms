@@ -9,7 +9,7 @@
 				<div class="text-xs font-normal text-gray-500">
 					<span>{{ props.doc.shift_dates || getShiftDates(props.doc) }}</span>
 					<span v-if="props.doc.end_date" class="whitespace-pre"> &middot; </span>
-					<span v-if="props.doc.end_date" class="whitespace-nowrap">{{ __("{0}d", [props.doc.total_shift_days || getTotalShiftDays(props.doc)]) }}</span>
+					<span v-if="props.doc.end_date" class="whitespace-nowrap">{{ props.doc.total_shift_days || getTotalShiftDays(props.doc) }}天</span>
 				</div>
 			</div>
 		</template>
@@ -17,7 +17,7 @@
 			<span v-if="props.doc.shift_timing" class="text-gray-700 font-normal rounded text-base">
 				{{ props.doc.shift_timing }}
 			</span>
-			<Badge v-else variant="outline" :theme="colorMap[status]" :label="status" size="md" />
+			<Badge v-else variant="outline" :theme="colorMap[status]" :label="statusMap[status] || status" size="md" />
 			<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
 		</template>
 	</ListItem>
@@ -30,6 +30,13 @@ import { Badge, FeatherIcon } from "frappe-ui"
 import ListItem from "@/components/ListItem.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import { getShiftDates, getTotalShiftDays } from "@/data/attendance"
+
+const statusMap = {
+	Draft: "草稿",
+	Submitted: "已提交",
+	Active: "活跃",
+	Inactive: "停用",
+}
 
 const props = defineProps({
 	doc: {

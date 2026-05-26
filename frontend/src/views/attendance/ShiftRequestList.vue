@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Shift Request"
-			pageTitle="Shift Request History"
+			pageTitle="班次申请记录"
 			:tabButtons="TAB_BUTTONS"
 			:fields="SHIFT_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
@@ -16,7 +16,7 @@ import { IonPage } from "@ionic/vue"
 import ListView from "@/components/ListView.vue"
 
 const __ = inject("$translate")
-const TAB_BUTTONS = ["My Requests", "Team Requests"]
+const TAB_BUTTONS = ["我的申请", "团队申请"]
 const SHIFT_REQUEST_FIELDS = [
 	"name",
 	"employee",
@@ -33,28 +33,28 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "status",
 		fieldtype: "Select",
-		label: __("Status"),
+		label: "状态",
 		options: STATUS_FILTER_OPTIONS,
 	},
 	{
 		fieldname: "shift_type",
 		fieldtype: "Link",
-		label: __("Shift Type"),
+		label: "班次类型",
 		options: "Shift Type",
 	},
 	{
 		fieldname: "employee",
 		fieldtype: "Link",
-		label: __("Employee"),
+		label: "员工",
 		options: "Employee",
 	},
 	{
 		fieldname: "department",
 		fieldtype: "Link",
-		label: __("Department"),
+		label: "部门",
 		options: "Department",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: "开始日期" },
+	{ fieldname: "to_date", fieldtype: "Date", label: "结束日期" },
 ]
 </script>

@@ -36,7 +36,7 @@
 						variant="solid"
 						:loading="loading"
 					>
-						{{ __("Download PDF") }}
+						{{ "下载PDF" }}
 					</Button>
 				</template>
 			</FormView>
@@ -79,11 +79,11 @@ const formFields = createResource({
 formFields.reload()
 
 const tabs = [
-	{ name: "Details", lastField: "payment_days" },
-	{ name: "Earnings & Deductions", lastField: "base_total_deduction" },
-	{ name: "Net Pay Info", lastField: "base_total_in_words" },
-	{ name: "Income Tax Breakup", lastField: "total_income_tax" },
-	{ name: "Bank Details", lastField: "bank_account_no" },
+	{ name: "详情", lastField: "payment_days" },
+	{ name: "收入与扣款", lastField: "base_total_deduction" },
+	{ name: "净薪信息", lastField: "base_total_in_words" },
+	{ name: "个人所得税明细", lastField: "total_income_tax" },
+	{ name: "银行信息", lastField: "bank_account_no" },
 ]
 
 watch(
@@ -143,7 +143,7 @@ function downloadPDF() {
 			if (response.ok) {
 				return response.blob()
 			} else {
-				downloadError.value = "Failed to download PDF"
+				downloadError.value = "PDF下载失败"
 			}
 		})
 		.then((blob) => {
@@ -159,7 +159,7 @@ function downloadPDF() {
 			}, 3000)
 		})
 		.catch((error) => {
-			downloadError.value = `Failed to download PDF: ${error.message}`
+			downloadError.value = `PDF下载失败: ${error.message}`
 		})
 		.finally(() => {
 			loading.value = false

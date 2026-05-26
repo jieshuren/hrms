@@ -29,7 +29,7 @@
 			</div>
 		</template>
 		<template #right>
-			<Badge variant="outline" :theme="colorMap[status]" :label="__(status, null, 'Employee Advance')" size="md" />
+			<Badge variant="outline" :theme="colorMap[status]" :label="labelStatusMap[status] || status" size="md" />
 			<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
 		</template>
 	</ListItem>
@@ -57,6 +57,17 @@ const props = defineProps({
 		required: false,
 	},
 })
+
+const labelStatusMap = {
+	Paid: "已支付",
+	Unpaid: "未支付",
+	Claimed: "已报销",
+	Returned: "已归还",
+	"Partly Claimed and Returned": "部分报销并归还",
+	Draft: "草稿",
+	Submitted: "已提交",
+	Cancelled: "已取消",
+}
 
 const colorMap = {
 	Paid: "green",

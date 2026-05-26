@@ -78,9 +78,9 @@ const props = defineProps({
 })
 
 const tabs = [
-	{ name: "Expenses", lastField: "taxes" },
-	{ name: "Advances", lastField: "advances" },
-	{ name: "Totals", lastField: "cost_center" },
+	{ name: "费用", lastField: "taxes" },
+	{ name: "预付", lastField: "advances" },
+	{ name: "合计", lastField: "cost_center" },
 ]
 
 // object to store form data

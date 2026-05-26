@@ -4,51 +4,51 @@
 			<div class="grid grid-cols-2 gap-6">
 				<Link
 					doctype="Employee"
-					label="Employee"
+					label="员工"
 					v-model="form.employee"
 					:disabled="!!props.shiftAssignmentName"
 				/>
-				<FormControl type="text" label="Company" v-model="form.company" :disabled="true" />
+				<FormControl type="text" label="公司" v-model="form.company" :disabled="true" />
 				<FormControl
 					type="text"
-					label="Employee Name"
+					label="员工姓名"
 					v-model="form.employee_name"
 					:disabled="true"
 				/>
 				<FormControl
 					type="text"
-					label="Department"
+					label="部门"
 					v-model="form.department"
 					:disabled="true"
 				/>
 				<Link
 					doctype="Shift Type"
-					label="Shift Type"
+					label="班次类型"
 					v-model="form.shift_type"
 					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="date"
-					label="Start Date"
+					label="开始日期"
 					v-model="form.start_date"
 					:disabled="!!props.shiftAssignmentName"
 				/>
 				<Link
 					doctype="Shift Location"
-					label="Shift Location"
+					label="班次地点"
 					v-model="form.shift_location"
 					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="date"
-					label="End Date"
+					label="结束日期"
 					v-model="form.end_date"
 					:disabled="!!props.shiftAssignmentName"
 				/>
 				<FormControl
 					type="select"
-					:options="['Active', 'Inactive']"
-					label="Status"
+					:options="[{'label': '活跃', 'value': 'Active'}, {'label': '停用', 'value': 'Inactive'}]"
+					label="状态"
 					v-model="form.status"
 				/>
 			</div>
@@ -62,10 +62,10 @@
 				class="mt-6 space-y-6"
 			>
 				<hr />
-				<h4 class="font-semibold">Schedule Settings</h4>
+				<h4 class="font-semibold">排班设置</h4>
 				<div class="grid grid-cols-2 gap-6">
 					<div class="space-y-1.5">
-						<div class="text-xs text-gray-600">Repeat On Days</div>
+						<div class="text-xs text-gray-600">重复日期</div>
 						<div
 							class="border rounded grid grid-flow-col h-7 justify-stretch overflow-clip"
 						>
@@ -80,7 +80,7 @@
 								@click="repeatOnDays[day] = !repeatOnDays[day]"
 							>
 								<div class="text-center text-sm my-auto">
-									{{ day.substring(0, 3) }}
+									{{ dayLabels[day] }}
 								</div>
 							</div>
 						</div>
@@ -88,12 +88,12 @@
 					<FormControl
 						type="select"
 						:options="[
-							'Every Week',
-							'Every 2 Weeks',
-							'Every 3 Weeks',
-							'Every 4 Weeks',
+							{'label': '每周', 'value': 'Every Week'},
+							{'label': '每两周', 'value': 'Every 2 Weeks'},
+							{'label': '每三周', 'value': 'Every 3 Weeks'},
+							{'label': '每四周', 'value': 'Every 4 Weeks'},
 						]"
-						label="Frequency"
+						label="频率"
 						v-model="frequency"
 						:disabled="!!props.shiftAssignmentName"
 					/>
@@ -106,7 +106,7 @@
 					title: deleteDialogOptions.title,
 					actions: [
 						{
-							label: 'Confirm',
+							label: '确认',
 							variant: 'solid',
 							onClick: deleteDialogOptions.action,
 						},
@@ -121,7 +121,7 @@
 		<template #actions>
 			<div class="flex space-x-3 justify-end">
 				<Dropdown v-if="props.shiftAssignmentName" :options="actions">
-					<Button size="md" label="Delete" class="w-28 text-red-600" />
+					<Button size="md" label="删除" class="w-28 text-red-600" />
 				</Dropdown>
 				<Button
 					size="md"
@@ -211,6 +211,16 @@ const repeatOnDaysObject = {
 	Sunday: false,
 };
 
+const dayLabels: Record<string, string> = {
+	Monday: '周一',
+	Tuesday: '周二',
+	Wednesday: '周三',
+	Thursday: '周四',
+	Friday: '周五',
+	Saturday: '周六',
+	Sunday: '周日',
+};
+
 const form = reactive({ ...formObject });
 const repeatOnDays = reactive({ ...repeatOnDaysObject });
 
@@ -223,16 +233,16 @@ const deleteDialogOptions = ref({ title: "", message: "", action: () => {} });
 const dialog = computed(() => {
 	if (props.shiftAssignmentName)
 		return {
-			title: `[${selectedDate.value}] Shift Assignment ${props.shiftAssignmentName}`,
-			button: "Update",
+			title: `[${selectedDate.value}] 排班分配 ${props.shiftAssignmentName}`,
+			button: "更新",
 			action: updateShiftAssigment,
 			actionDisabled:
 				form.status === shiftAssignment.value?.doc?.status &&
 				form.end_date === shiftAssignment.value?.doc?.end_date,
 		};
 	return {
-		title: "New Shift Assignment",
-		button: "Submit",
+		title: "新建排班分配",
+		button: "提交",
 		action: createShiftAssigment,
 		actionDisabled: false,
 	};
@@ -241,10 +251,10 @@ const dialog = computed(() => {
 const actions = computed(() => {
 	const options = [
 		{
-			label: `Shift for ${selectedDate.value}`,
+			label: `${selectedDate.value} 的班次`,
 			onClick: () => {
 				deleteDialogOptions.value = {
-					title: "Delete Shift?",
+					title: "删除班次？",
 					message: `This will remove Shift Assignment: <a href='/app/shift-assignment/${props.shiftAssignmentName}' target='_blank'><u>${props.shiftAssignmentName}</u></a> scheduled for <b>${selectedDate.value}</b>.`,
 					action: () => deleteCurrentShift.submit(),
 				};
@@ -252,10 +262,10 @@ const actions = computed(() => {
 			},
 		},
 		{
-			label: "All Consecutive Shifts",
+			label: "所有连续班次",
 			onClick: () => {
 				deleteDialogOptions.value = {
-					title: "Delete Shift Assignment?",
+					title: "删除排班分配？",
 					message: `This will delete Shift Assignment: <a href='/app/shift-assignment/${
 						props.shiftAssignmentName
 					}' target='_blank'><u>${
@@ -274,10 +284,10 @@ const actions = computed(() => {
 	];
 	if (form.shift_schedule_assignment)
 		options.push({
-			label: "Shift Schedule Assignment",
+			label: "排班计划分配",
 			onClick: () => {
 				deleteDialogOptions.value = {
-					title: "Delete Shift Schedule Assignment?",
+					title: "删除排班计划分配？",
 					message: `This will delete Shift Schedule Assignment: <a href='/app/shift-schedule-assignment/${form.shift_schedule_assignment}' target='_blank'><u>${form.shift_schedule_assignment}</u></a> and all the shifts associated with it.`,
 					action: () => deleteShiftScheduleAssignment.submit(),
 				};
@@ -379,7 +389,7 @@ const getShiftAssignment = (name: string) =>
 		},
 		setValue: {
 			onSuccess() {
-				raiseToast("success", "Shift Assignment updated successfully!");
+				raiseToast("success", "排班分配更新成功！");
 				emit("fetchEvents");
 			},
 			onError(error: { messages: string[] }) {
@@ -427,7 +437,7 @@ const shiftAssignments = createListResource({
 	doctype: "Shift Assignment",
 	insert: {
 		onSuccess() {
-			raiseToast("success", "Shift Assignment created successfully!");
+			raiseToast("success", "排班分配创建成功！");
 			emit("fetchEvents");
 		},
 		onError(error: { messages: string[] }) {
@@ -436,7 +446,7 @@ const shiftAssignments = createListResource({
 	},
 	delete: {
 		onSuccess() {
-			raiseToast("success", "Shift Assignment deleted successfully!");
+			raiseToast("success", "排班分配删除成功！");
 			emit("fetchEvents");
 		},
 		onError(error: { messages: string[] }) {
@@ -459,7 +469,7 @@ const insertShift = createResource({
 		};
 	},
 	onSuccess: () => {
-		raiseToast("success", "Shift Assignment created successfully!");
+		raiseToast("success", "排班分配创建成功！");
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {
@@ -476,7 +486,7 @@ const deleteCurrentShift = createResource({
 		};
 	},
 	onSuccess: () => {
-		raiseToast("success", "Shift deleted successfully!");
+		raiseToast("success", "班次删除成功！");
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {
@@ -502,7 +512,7 @@ const createShiftAssignmentSchedule = createResource({
 		};
 	},
 	onSuccess: () => {
-		raiseToast("success", "Shift Schedule Assignment created successfully!");
+		raiseToast("success", "排班计划分配创建成功！");
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {
@@ -516,7 +526,7 @@ const deleteShiftScheduleAssignment = createResource({
 		return { shift_schedule_assignment: form.shift_schedule_assignment };
 	},
 	onSuccess: () => {
-		raiseToast("success", "Shift Schedule Assignment deleted successfully!");
+		raiseToast("success", "排班计划分配删除成功！");
 		emit("fetchEvents");
 	},
 	onError(error: { messages: string[] }) {

@@ -5,7 +5,7 @@
 		v-else-if="props.fieldtype === 'Select'"
 		variant="outline"
 		:theme="colorMap[props.value]"
-		:label="__(props.value)"
+		:label="selectValueMap[props.value] || props.value"
 		size="md"
 	/>
 
@@ -49,7 +49,7 @@
 			style="border: 0"
 			:src="`https://maps.google.com/maps?q=${getCoordinates(props.value).latitude},${
 				getCoordinates(props.value).longitude
-			}&hl=en&z=15&amp;output=embed`"
+			}&hl=zh-CN&z=15&amp;output=embed`"
 		>
 		</iframe>
 	</div>
@@ -64,6 +64,31 @@ import { Badge, FormControl, Input } from "frappe-ui"
 import EmployeeAvatar from "@/components/EmployeeAvatar.vue"
 
 const dayjs = inject("$dayjs")
+
+const selectValueMap = {
+	Approved: "已批准",
+	Rejected: "已拒绝",
+	Open: "待审批",
+	Draft: "草稿",
+	Submitted: "已提交",
+	Cancelled: "已取消",
+	Paid: "已支付",
+	Unpaid: "未支付",
+	Claimed: "已报销",
+	Returned: "已归还",
+	Active: "活跃",
+	Inactive: "停用",
+	"Half Day": "半天",
+	"On Leave": "请假",
+	Present: "出勤",
+	Absent: "缺勤",
+	"Work From Home": "居家办公",
+	Holiday: "假期",
+	"Partly Claimed and Returned": "部分报销并归还",
+	"Approved & Draft": "已批准 & 草稿",
+	"Approved & Unpaid": "已批准 & 未支付",
+	"Approved & Submitted": "已批准 & 已提交",
+}
 
 const props = defineProps({
 	value: [String, Number, Boolean, Array, Object],

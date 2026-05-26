@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Leave Application"
-			:pageTitle="__('Leave History')"
+			:pageTitle="'请假记录'"
 			:tabButtons="TAB_BUTTONS"
 			:fields="LEAVE_FIELDS"
 			:filterConfig="FILTER_CONFIG"
@@ -16,7 +16,7 @@ import ListView from "@/components/ListView.vue"
 import { inject } from "vue"
 
 const __ = inject("$translate")
-const TAB_BUTTONS = ["My Leaves", "Team Leaves"] // __("My Leaves"), __("Team Leaves")
+const TAB_BUTTONS = ["我的请假", "团队请假"]
 const LEAVE_FIELDS = [
 	"name",
 	"employee",
@@ -27,33 +27,33 @@ const LEAVE_FIELDS = [
 	"total_leave_days",
 	"status",
 ]
-const STATUS_FILTER_OPTIONS = ["Open", "Approved", "Rejected"] // __("Open"), __("Approved"), __("Rejected")
+const STATUS_FILTER_OPTIONS = ["Open", "Approved", "Rejected"]
 const FILTER_CONFIG = [
 	{
 		fieldname: "status",
 		fieldtype: "Select",
-		label: __("Status"),
+		label: "状态",
 		options: STATUS_FILTER_OPTIONS,
 	},
 	{
 		fieldname: "leave_type",
 		fieldtype: "Link",
-		label: __("Leave Type"),
+		label: "请假类型",
 		options: "Leave Type",
 	},
 	{
 		fieldname: "employee",
 		fieldtype: "Link",
-		label: __("Employee"),
+		label: "员工",
 		options: "Employee",
 	},
 	{
 		fieldname: "department",
 		fieldtype: "Link",
-		label: __("Department"),
+		label: "部门",
 		options: "Department",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: "开始日期" },
+	{ fieldname: "to_date", fieldtype: "Date", label: "结束日期" },
 ]
 </script>

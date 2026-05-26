@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Expense Claim"
-			:pageTitle="('Claim History')"
+			:pageTitle="'报销记录'"
 			:tabButtons="TAB_BUTTONS"
 			:fields="EXPENSE_CLAIM_FIELDS"
 			groupBy="`tabExpense Claim`.name"
@@ -16,7 +16,7 @@ import { IonPage } from "@ionic/vue"
 import ListView from "@/components/ListView.vue"
 
 
-const TAB_BUTTONS = ["My Claims", "Team Claims"] // __("My Claims"), __("Team Claims")
+const TAB_BUTTONS = ["我的报销", "团队报销"]
 const EXPENSE_CLAIM_FIELDS = [
 	"`tabExpense Claim`.name",
 	"`tabExpense Claim`.employee",
@@ -36,27 +36,27 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "approval_status",
 		fieldtype: "Select",
-		label: "Approval Status",
+		label: "审批状态",
 		options: ["Draft", "Approved", "Rejected"],
 	},
 	{
 		fieldname: "status",
 		fieldtype: "Select",
-		label: "Status",
+		label: "状态",
 		options: ["Draft", "Paid", "Unpaid", "Rejected", "Submitted", "Cancelled"],
 	},
 	{
 		fieldname: "employee",
 		fieldtype: "Link",
-		label: "Employee",
+		label: "员工",
 		options: "Employee",
 	},
 	{
 		fieldname: "department",
 		fieldtype: "Link",
-		label: "Department",
+		label: "部门",
 		options: "Department",
 	},
-	{ fieldname: "posting_date", fieldtype: "Date", label: "Posting Date" },
+	{ fieldname: "posting_date", fieldtype: "Date", label: "提交日期" },
 ]
 </script>

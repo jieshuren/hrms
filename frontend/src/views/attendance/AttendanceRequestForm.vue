@@ -90,7 +90,7 @@ function setFormReadOnly() {
 function validateDates(from_date, to_date) {
 	if (!(from_date && to_date)) return
 
-	const error_message = from_date > to_date ? __("To Date cannot be before From Date") : ""
+	const error_message = from_date > to_date ? "结束日期不能早于开始日期" : ""
 
 	const from_date_field = formFields.data.find((field) => field.fieldname === "from_date")
 	from_date_field.error_message = error_message

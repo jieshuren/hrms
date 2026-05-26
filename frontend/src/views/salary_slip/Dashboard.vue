@@ -1,11 +1,11 @@
 <template>
-	<BaseLayout :pageTitle="__('Salary Slips')">
+	<BaseLayout :pageTitle="'工资条'">
 		<template #body>
 			<div class="flex flex-col items-center my-7 p-4">
 				<div class="flex flex-col w-full bg-white rounded py-5 px-3.5 gap-5">
 					<div v-if="lastSalarySlip && lastSalarySlip.year_to_date" class="flex flex-col w-full gap-1.5">
 						<span class="text-gray-600 text-sm font-medium leading-5">
-							{{ __("Year To Date") }}
+							{{ "本年累计" }}
 						</span>
 						<span class="text-gray-800 text-xl font-bold leading-6">
 							{{
@@ -18,9 +18,9 @@
 					</div>
 
 					<Autocomplete
-						:label="__('Payroll Period')"
+						:label="'薪酬周期'"
 						class="w-full"
-						:placeholder="__('Select Payroll Period')"
+						:placeholder="'选择薪酬周期'"
 						v-model="selectedPeriod"
 						:options="payrollPeriods.data"
 					/>
@@ -47,7 +47,7 @@
 							</router-link>
 						</div>
 					</div>
-					<EmptyState :message="__('No salary slips found')" v-else />
+					<EmptyState :message="'未找到工资条'" v-else />
 				</div>
 			</div>
 		</template>

@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Shift Assignment"
-			:pageTitle="__('Shift Assignment History')"
+			:pageTitle="'排班分配记录'"
 			:fields="SHIFT_ASSIGNMENT_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
@@ -21,10 +21,10 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "shift_type",
 		fieldtype: "Link",
-		label: __("Shift Type"),
+		label: "班次类型",
 		options: "Shift Type",
 	},
-	{ fieldname: "start_date", fieldtype: "Date", label: __("Start Date") },
-	{ fieldname: "end_date", fieldtype: "Date", label: __("End Date") },
+	{ fieldname: "start_date", fieldtype: "Date", label: "开始日期" },
+	{ fieldname: "end_date", fieldtype: "Date", label: "结束日期" },
 ]
 </script>

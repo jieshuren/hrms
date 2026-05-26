@@ -2,13 +2,13 @@
 	<div class="px-12 py-8 space-y-8">
 		<div class="flex items-center">
 			<FeatherIcon name="calendar" class="h-7 w-7 text-gray-500 mr-2.5" />
-			<span class="font-semibold text-2xl text-gray-500 mr-2">Roster:</span>
-			<span class="font-semibold text-2xl">Month View</span>
+			<span class="font-semibold text-2xl text-gray-500 mr-2">排班:</span>
+			<span class="font-semibold text-2xl">月视图</span>
 			<div class="ml-auto space-x-2.5">
 				<Dropdown
 					:options="VIEW_OPTIONS"
 					:button="{
-						label: 'View',
+						label: '视图',
 						iconRight: 'chevron-down',
 						size: 'md',
 					}"
@@ -17,14 +17,14 @@
 				<Dropdown
 					:options="[
 						{
-							label: 'Shift Assignment',
+							label: '排班分配',
 							onClick: () => {
 								showShiftAssignmentDialog = true;
 							},
 						},
 					]"
 					:button="{
-						label: 'Create',
+						label: '创建',
 						variant: 'solid',
 						iconRight: 'chevron-down',
 						size: 'md',
@@ -45,7 +45,7 @@
 			:employeeFilters="employeeFilters"
 			:shiftFilters="shiftFilters"
 		/>
-		<div v-else class="py-40 text-center">Please select a company.</div>
+		<div v-else class="py-40 text-center">请选择公司。</div>
 	</div>
 	<ShiftAssignmentDialog
 		v-model="showShiftAssignmentDialog"
@@ -84,14 +84,14 @@ const employeeFilters = reactive<EmployeeFilters>({
 const shiftFilters = reactive<ShiftFilters>({});
 
 const VIEW_OPTIONS = [
-	"Shift Type",
-	"Shift Location",
-	"Shift Assignment",
-	"Shift Schedule",
-	"Shift Schedule Assignment",
-].map((label) => ({
-	label,
-	onClick: () => goTo(`/app/${label.toLowerCase().split(" ").join("-")}`),
+	{ label: "班次类型", route: "shift-type" },
+	{ label: "班次地点", route: "shift-location" },
+	{ label: "排班分配", route: "shift-assignment" },
+	{ label: "排班计划", route: "shift-schedule" },
+	{ label: "排班计划分配", route: "shift-schedule-assignment" },
+].map((item) => ({
+	label: item.label,
+	onClick: () => goTo(`/app/${item.route}`),
 }));
 
 const addToMonth = (change: number) => {

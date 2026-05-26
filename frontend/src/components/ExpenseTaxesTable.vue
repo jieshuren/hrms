@@ -35,10 +35,10 @@
 									{{ item.account_head }}
 								</div>
 								<div class="text-xs font-normal text-gray-500">
-									<span> Rate: {{ formatCurrency(item.rate, expenseClaim.currency) }} </span>
+									<span> 税率: {{ formatCurrency(item.rate, expenseClaim.currency) }} </span>
 									<span class="whitespace-pre"> &middot; </span>
 									<span class="whitespace-nowrap">
-										Amount: {{ formatCurrency(item.tax_amount, expenseClaim.currency) }}
+										税额: {{ formatCurrency(item.tax_amount, expenseClaim.currency) }}
 									</span>
 								</div>
 							</div>

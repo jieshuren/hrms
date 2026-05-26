@@ -1,7 +1,7 @@
 <template>
 	<!-- Header -->
 	<div class="flex flex-row justify-between items-center">
-		<h2 class="text-base font-semibold text-gray-800">{{ type }}</h2>
+		<h2 class="text-base font-semibold text-gray-800">{{ type === 'Earnings' ? '收入' : '扣款' }}</h2>
 		<span class="text-base font-semibold text-gray-800">
 			{{ total }}
 		</span>
@@ -29,7 +29,7 @@
 	</div>
 	<EmptyState
 		v-else
-		:message="__('No {0} added', [props.type?.toLowerCase()])"
+		:message="__('No {0} added', [props.type === 'Earnings' ? '收入' : '扣款'])"
 		:isTableField="true"
 	/>
 </template>

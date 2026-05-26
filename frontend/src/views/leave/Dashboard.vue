@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Leaves & Holidays')">
+	<BaseLayout :pageTitle="'请假与假期'">
 		<template #body>
 			<div class="flex flex-col items-center mt-7 mb-7 py-4">
 				<LeaveBalance />
@@ -14,11 +14,11 @@
 							variant="solid"
 							class="py-5 text-base w-full"
 						>
-							{{ __("Request a Leave") }}
+							{{ "申请请假" }}
 						</Button>
 					</router-link>
 					<div>
-						<div class="text-lg text-gray-800 font-bold">{{ __('Recent Leaves') }} </div>
+						<div class="text-lg text-gray-800 font-bold">{{ '最近请假' }} </div>
 						<RequestList
 							:component="markRaw(LeaveRequestItem)"
 							:items="myLeaves.data"

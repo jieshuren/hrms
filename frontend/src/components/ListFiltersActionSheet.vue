@@ -4,7 +4,7 @@
 		class="bg-white w-full flex flex-col items-center justify-center pb-5 max-h-[calc(100vh-5rem)]"
 	>
 		<div class="w-full pt-8 pb-5 border-b text-center sticky top-0 z-[100]">
-			<span class="text-gray-900 font-bold text-lg">{{ __("Filters") }} </span>
+			<span class="text-gray-900 font-bold text-lg">筛选 </span>
 		</div>
 
 		<div class="w-full p-4 overflow-auto">
@@ -73,14 +73,14 @@
 				variant="outline"
 				class="w-full py-5 text-sm"
 			>
-				{{ __("Clear All") }}
+				清除全部
 			</Button>
 			<Button
 				@click="emit('apply-filters')"
 				variant="solid"
 				class="w-full py-5 text-sm"
 			>
-				{{ __("Apply Filters") }}
+				应用筛选
 			</Button>
 		</div>
 	</div>

@@ -2,7 +2,7 @@
 	<ion-page>
 		<ListView
 			doctype="Attendance Request"
-			:pageTitle="__('Attendance Request History')"
+			:pageTitle="'考勤申请记录'"
 			:fields="ATTENDANCE_REQUEST_FIELDS"
 			:filterConfig="FILTER_CONFIG"
 		/>
@@ -21,10 +21,10 @@ const FILTER_CONFIG = [
 	{
 		fieldname: "shift",
 		fieldtype: "Link",
-		label: __("Shift"),
+		label: "班次",
 		options: "Shift Type",
 	},
-	{ fieldname: "from_date", fieldtype: "Date", label: __("From Date") },
-	{ fieldname: "to_date", fieldtype: "Date", label: __("To Date") },
+	{ fieldname: "from_date", fieldtype: "Date", label: "开始日期" },
+	{ fieldname: "to_date", fieldtype: "Date", label: "结束日期" },
 ]
 </script>

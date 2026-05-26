@@ -9,7 +9,7 @@
 				<span>{{ __("Last {0} was at {1}", [__(lastLogType), formatTimestamp(lastLog.time)]) }}</span>
 				<span class="whitespace-pre"> &middot; </span>
 				<router-link :to="{ name: 'EmployeeCheckinListView' }" v-slot="{ navigate }">
-					<span @click="navigate" class="underline">View List</span>
+					<span @click="navigate" class="underline">查看列表</span>
 				</router-link>
 			</div>
 			<Button
@@ -134,7 +134,7 @@ function handleLocationSuccess(position) {
 }
 
 function handleLocationError(error) {
-	locationStatus.value = "Unable to retrieve your location"
+	locationStatus.value = "无法获取您的位置"
 	if (error) locationStatus.value += `: ERROR(${error.code}): ${error.message}`
 }
 

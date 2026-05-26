@@ -8,7 +8,7 @@
 			class="w-full flex flex-row gap-2 pt-8 pb-5 border-b justify-center items-center sticky top-0 z-[100]"
 		>
 			<span class="text-gray-900 font-bold text-lg text-center">
-				{{ __(document?.doctype) }}
+				{{ doctypeMap[document?.doctype] || document?.doctype }}
 			</span>
 			<FeatherIcon
 				v-if="props.showOpenForm"
@@ -33,7 +33,7 @@
 						'flex w-full',
 					]"
 				>
-					<div class="text-gray-600 text-base">{{ __(field.label, null, props.modelValue?.doctype) }}</div>
+					<div class="text-gray-600 text-base">{{ field.label }}</div>
 					<component
 						v-if="field.fieldtype === 'Table'"
 						:is="field.component"
@@ -52,7 +52,7 @@
 					class="flex flex-col gap-2 w-full"
 					v-if="attachedFiles?.data?.length"
 				>
-					<div class="text-gray-600 text-base">{{ __('Attachments') }}</div>
+					<div class="text-gray-600 text-base">附件</div>
 					<ul class="w-full flex flex-col items-center gap-2">
 						<li
 							class="bg-gray-100 rounded p-2 w-full"
@@ -93,7 +93,7 @@
 				<template #prefix>
 					<FeatherIcon name="x" class="w-4" />
 				</template>
-				{{ __("Reject") }}
+				拒绝
 			</Button>
 
 			<Button
@@ -105,7 +105,7 @@
 				<template #prefix>
 					<FeatherIcon name="check" class="w-4" />
 				</template>
-				{{ __("Approve") }}
+				批准
 			</Button>
 		</div>
 
@@ -123,7 +123,7 @@
 				class="w-full py-5"
 				variant="solid"
 			>
-				{{ __("Submit") }}
+				提交
 			</Button>
 		</div>
 
@@ -140,7 +140,7 @@
 				<template #prefix>
 					<FeatherIcon name="x" class="w-4" />
 				</template>
-				{{ __("Cancel") }}
+				取消
 			</Button>
 		</div>
 
@@ -174,6 +174,23 @@ import { getCompanyCurrency } from "@/data/currencies"
 import { formatCurrency } from "@/utils/formatters"
 
 import useWorkflow from "@/composables/workflow"
+
+const doctypeMap = {
+	"Leave Application": "请假申请",
+	"Expense Claim": "费用报销",
+	"Employee Advance": "员工预付款",
+	"Attendance Request": "考勤申请",
+	"Shift Request": "班次申请",
+}
+
+const statusMap = {
+	Approved: "已批准",
+	Rejected: "已拒绝",
+	Open: "待审批",
+	Draft: "草稿",
+	Submitted: "已提交",
+	Cancelled: "已取消",
+}
 
 const __ = inject("$translate")
 
@@ -277,19 +294,17 @@ const approvalField = computed(() => {
 
 const getSuccessMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
-		return __("{0} successfully!", [__(status)])
+		return statusMap[status] + '成功！'
 	} else if (docstatus) {
-		return __("Document {0} successfully!", [
-			docstatus === 1 ? __("submitted") : __("cancelled")]
-		)
+		return '文档' + (docstatus === 1 ? '提交' : '取消') + '成功！'
 	}
 }
 
 const getFailureMessage = ({ status = "", docstatus = 0 }) => {
 	if (status) {
-		return __("{0} failed!", [status === __("Approved") ? __("Approval") : __("Rejection")])
+		return (status === 'Approved' ? '审批' : '拒绝') + '失败！'
 	} else if (docstatus) {
-		return __('Document {0} failed!', [docstatus === 1 ? __("submission") : __("cancellation")])
+		return '文档' + (docstatus === 1 ? '提交' : '取消') + '失败！'
 	}
 }
 
@@ -315,7 +330,7 @@ const updateDocumentStatus = ({ status = "", docstatus = 0 }) => {
 			},
 			onError() {
 				toast({
-					title: __("Error"),
+					title: "错误",
 					text: getFailureMessage({ status, docstatus }),
 					icon: "alert-circle",
 					position: "bottom-center",

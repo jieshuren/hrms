@@ -1,43 +1,43 @@
 <template>
-	<BaseLayout pageTitle="Attendance">
+	<BaseLayout pageTitle="考勤">
 		<template #body>
 			<div class="flex flex-col mt-7 mb-7 p-4 gap-7">
 				<AttendanceCalendar />
 				<div class="w-full">
 					<router-link :to="{ name: 'AttendanceRequestFormView' }" v-slot="{ navigate }">
 						<Button @click="navigate" variant="solid" class="w-full py-5 text-base">
-							{{ __("Request Attendance") }}
+							{{ "申请考勤" }}
 						</Button>
 					</router-link>
 				</div>
 				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Attendance Requests") }}</div>
+					<div class="text-lg text-gray-800 font-bold">{{ "最近考勤申请" }}</div>
 					<RequestList
 						:component="markRaw(AttendanceRequestItem)"
 						:items="myAttendanceRequests?.data?.slice(0, 5)"
 						:addListButton="true"
-						:listButtonRoute="__('AttendanceRequestListView')"
+						:listButtonRoute="'AttendanceRequestListView'"
 					/>
 				</div>
 				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Upcoming Shifts") }}</div>
+					<div class="text-lg text-gray-800 font-bold">{{ "即将到来的班次" }}</div>
 					<RequestList
 						:component="markRaw(ShiftAssignmentItem)"
 						:items="upcomingShifts"
 						:addListButton="true"
 						listButtonRoute="ShiftAssignmentListView"
-						:emptyStateMessage="__('You have no upcoming shifts')"
+						:emptyStateMessage="'您没有即将到来的班次'"
 					/>
 				</div>
 				<div class="w-full">
 					<router-link :to="{ name: 'ShiftRequestFormView' }" v-slot="{ navigate }">
 						<Button @click="navigate" variant="solid" class="w-full py-5 text-base">
-							{{ __("Request a Shift") }}
+							{{ "申请班次" }}
 						</Button>
 					</router-link>
 				</div>
 				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Shift Requests") }}</div>
+					<div class="text-lg text-gray-800 font-bold">{{ "最近班次申请" }}</div>
 					<RequestList
 						:component="markRaw(ShiftRequestItem)"
 						:items="myShiftRequests?.data?.slice(0, 5)"

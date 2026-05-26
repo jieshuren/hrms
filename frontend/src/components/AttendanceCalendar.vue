@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col w-full gap-5" v-if="calendarEvents.data">
-		<div class="text-lg text-gray-800 font-bold">{{ __("Attendance Calendar") }}</div>
+		<div class="text-lg text-gray-800 font-bold">考勤日历</div>
 
 		<div class="flex flex-col gap-6 bg-white py-6 px-3.5 rounded-lg border-none">
 			<!-- Month Change -->
@@ -11,7 +11,7 @@
 					@click="firstOfMonth = firstOfMonth.subtract(1, 'M')"
 				/>
 				<span class="text-lg text-gray-800 font-bold">
-					{{ firstOfMonth.format("MMMM") }} {{ firstOfMonth.format("YYYY") }}
+					{{ firstOfMonth.format("YYYY年M月") }}
 				</span>
 				<Button
 					icon="chevron-right"
@@ -48,7 +48,7 @@
 				<div v-for="status in summaryStatuses" class="flex flex-col gap-1">
 					<div class="flex flex-row gap-1 items-center">
 						<span class="rounded full h-3 w-3" :class="colorMap[status]" />
-						<span class="text-gray-600 text-sm font-medium leading-5"> {{ __(status) }} </span>
+						<span class="text-gray-600 text-sm font-medium leading-5"> {{ statusMap[status] || status }} </span>
 					</div>
 					<span class="text-gray-800 text-base font-semibold leading-6 mx-auto">
 						{{ summary[status] || 0 }}
@@ -66,6 +66,15 @@ import { createResource } from "frappe-ui"
 const dayjs = inject("$dayjs")
 const __ = inject("$translate")
 const firstOfMonth = ref(dayjs().date(1).startOf("D"))
+
+const statusMap = {
+	Present: "出勤",
+	"Work From Home": "居家办公",
+	"Half Day": "半天",
+	Absent: "缺勤",
+	"On Leave": "请假",
+	Holiday: "假期",
+}
 
 const colorMap = {
 	Present: "bg-green-300",
@@ -107,15 +116,7 @@ const getEventOnDate = (date) => {
 
 const getFirstLetter = (s) => Array.from(s.trim())[0] // Unicode
 
-const DAYS = [
-	getFirstLetter(__("Sunday")),
-	getFirstLetter(__("Monday")),
-	getFirstLetter(__("Tuesday")),
-	getFirstLetter(__("Wednesday")),
-	getFirstLetter(__("Thursday")),
-	getFirstLetter(__("Friday")),
-	getFirstLetter(__("Saturday")),
-]
+const DAYS = ["日", "一", "二", "三", "四", "五", "六"]
 
 //resources
 const calendarEvents = createResource({

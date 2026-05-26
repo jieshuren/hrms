@@ -6,21 +6,21 @@
 				Frappe HR
 			</a>
 			<FeatherIcon name="chevron-right" class="h-4 w-4" />
-			<span class="font-medium">Roster</span>
+			<span class="font-medium">排班</span>
 		</div>
 		<Dropdown
 			class="ml-auto"
 			:options="[
 				{
-					label: 'My Account',
+					label: '我的账户',
 					onClick: () => goTo('/me'),
 				},
 				{
-					label: 'Log Out',
+					label: '退出登录',
 					onClick: () => logout.submit(),
 				},
 				{
-					label: 'Switch to Desk',
+					label: '切换到桌面',
 					onClick: () => goTo('/app'),
 				},
 			]"

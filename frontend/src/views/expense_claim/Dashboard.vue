@@ -1,5 +1,5 @@
 <template>
-	<BaseLayout :pageTitle="__('Expense Claims')">
+	<BaseLayout :pageTitle="'费用报销'">
 		<template #body>
 			<div class="flex flex-col mt-7 mb-7 p-4 gap-7">
 				<ExpenseClaimSummary />
@@ -14,13 +14,13 @@
 							variant="solid"
 							class="w-full py-5 text-base"
 						>
-							{{ __("Claim an Expense") }}
+							{{ "申请报销" }}
 						</Button>
 					</router-link>
 				</div>
 
 				<div>
-					<div class="text-lg text-gray-800 font-bold">{{ __("Recent Expenses") }}</div>
+					<div class="text-lg text-gray-800 font-bold">{{ "最近报销" }}</div>
 					<RequestList
 						:component="markRaw(ExpenseClaimItem)"
 						:items="myClaims.data"
@@ -32,13 +32,13 @@
 				<div>
 					<div class="flex flex-row justify-between items-center">
 						<div class="text-lg text-gray-800 font-bold">
-							{{ __("Employee Advance Balance") }}
+							{{ "员工预付款余额" }}
 						</div>
 						<router-link
 							:to="{ name: 'EmployeeAdvanceListView' }"
 							class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
 						>
-							{{ __("View List") }}
+							{{ "查看列表" }}
 						</router-link>
 					</div>
 

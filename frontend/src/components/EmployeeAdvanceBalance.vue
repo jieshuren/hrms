@@ -18,12 +18,12 @@
 		>
 			<div class="flex flex-col bg-white w-full py-5 px-3.5 mt-0 border-none">
 				<Button @click="navigate" variant="subtle" class="py-5 text-base">
-					{{ __("Request an Advance") }}
+					申请预付款
 				</Button>
 			</div>
 		</router-link>
 	</div>
-	<EmptyState :message="__('You have no advances')" v-else />
+	<EmptyState :message="'您没有预付款'" v-else />
 </template>
 
 <script setup>

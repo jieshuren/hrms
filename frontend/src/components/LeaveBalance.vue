@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col w-full">
 		<div class="flex flex-row justify-between items-center px-4">
-			<div class="text-lg text-gray-800 font-bold">{{ __("Leave Balance") }} </div>
+			<div class="text-lg text-gray-800 font-bold">假期余额</div>
 			<router-link
 				:to="{ name: 'LeaveApplicationListView' }"
 				v-slot="{ navigate }"
@@ -11,7 +11,7 @@
 					@click="navigate"
 					class="text-sm text-gray-800 font-semibold cursor-pointer underline underline-offset-2"
 				>
-					{{ __("View Leave History") }}
+					查看请假记录
 				</div>
 			</router-link>
 		</div>
@@ -34,12 +34,12 @@
 					{{ `${allocation.balance_leaves}/${allocation.allocated_leaves}` }}
 				</div>
 				<div class="text-gray-600 font-normal text-sm w-24 leading-4">
-					{{ __("{0} balance", [__(leave_type, null, "Leave Type")]) }}
+					{{ leave_type }}余额
 				</div>
 			</div>
 		</div>
 
-		<EmptyState :message="__('You have no leaves allocated')" v-else />
+		<EmptyState :message="'您没有分配假期'" v-else />
 	</div>
 </template>
 

@@ -14,13 +14,13 @@
 					<span>{{ props.doc.shift_dates || getDates(props.doc) }}</span>
 					<span v-if="props.doc.to_date">
 						<span class="whitespace-pre"> &middot; </span>
-						<span class="whitespace-nowrap">{{ __("{0}d", [props.doc.total_shift_days || getTotalDays(props.doc)]) }}</span>
+						<span class="whitespace-nowrap">{{ props.doc.total_shift_days || getTotalDays(props.doc) }}天</span>
 					</span>
 				</div>
 			</div>
 		</template>
 		<template #right>
-			<Badge variant="outline" :theme="colorMap[status]" :label="status" size="md" />
+			<Badge variant="outline" :theme="colorMap[status]" :label="statusMap[status] || status" size="md" />
 			<FeatherIcon name="chevron-right" class="h-5 w-5 text-gray-500" />
 		</template>
 	</ListItem>
@@ -33,6 +33,14 @@ import { Badge, FeatherIcon } from "frappe-ui"
 import ListItem from "@/components/ListItem.vue"
 import ShiftIcon from "@/components/icons/ShiftIcon.vue"
 import { getDates, getTotalDays } from "@/data/attendance"
+
+const statusMap = {
+	Approved: "已批准",
+	Rejected: "已拒绝",
+	Open: "待审批",
+	Draft: "草稿",
+	Submitted: "已提交",
+}
 
 const props = defineProps({
 	doc: {

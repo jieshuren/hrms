@@ -9,10 +9,7 @@
 				<div v-if="doc?.gross_pay" class="text-xs font-normal text-gray-500">
 					<span>
 						{{
-							__("{0}: {1}", [
-								__("Gross Pay"),
-								formatCurrency(doc.gross_pay, doc.currency),
-							])
+							'税前工资: ' + formatCurrency(doc.gross_pay, doc.currency)
 						}}
 					</span>
 					<span class="whitespace-pre"> &middot; </span>

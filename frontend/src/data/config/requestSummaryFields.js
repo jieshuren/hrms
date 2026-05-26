@@ -4,52 +4,52 @@
 export const LEAVE_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "leave_type",
-		label: "Leave Type",
+		label: "请假类型",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "leave_dates",
-		label: "Leave Dates",
+		label: "请假日期",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "half_day",
-		label: "Half Day",
+		label: "半天",
 		fieldtype: "Check",
 	},
 	{
 		fieldname: "half_day_date",
-		label: "Half Day Date",
+		label: "半天日期",
 		fieldtype: "Date",
 	},
 	{
 		fieldname: "total_leave_days",
-		label: "Total Leave Days",
+		label: "请假天数",
 		fieldtype: "Float",
 	},
 	{
 		fieldname: "employee",
-		label: "Employee",
+		label: "员工",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "leave_balance",
-		label: "Leave Balance",
+		label: "假期余额",
 		fieldtype: "Float",
 	},
 	{
 		fieldname: "status",
-		label: "Status",
+		label: "状态",
 		fieldtype: "Select",
 	},
 	{
 		fieldname: "description",
-		label: "Reason",
+		label: "原因",
 		fieldtype: "Small Text",
 	},
 ]
@@ -57,58 +57,58 @@ export const LEAVE_FIELDS = [
 export const EXPENSE_CLAIM_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "posting_date",
-		label: "Posting Date",
+		label: "日期",
 		fieldtype: "Date",
 	},
 	{
 		fieldname: "employee",
-		label: "Employee",
+		label: "员工",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "expenses",
-		label: "Expenses",
+		label: "费用明细",
 		fieldtype: "Table",
 		componentName: "ExpenseItems",
 	},
 	{
 		fieldname: "total_claimed_amount",
-		label: "Total Claimed Amount",
+		label: "报销总额",
 		fieldtype: "Currency",
 	},
 	{
 		fieldname: "total_sanctioned_amount",
-		label: "Total Sanctioned Amount",
+		label: "核准总额",
 		fieldtype: "Currency",
 	},
 	{
 		fieldname: "total_taxes_and_charges",
-		label: "Total Taxes and Charges",
+		label: "税费合计",
 		fieldtype: "Currency",
 	},
 	{
 		fieldname: "total_advance_amount",
-		label: "Total Advance Amount",
+		label: "预付总额",
 		fieldtype: "Currency",
 	},
 	{
 		fieldname: "grand_total",
-		label: "Grand Total",
+		label: "合计",
 		fieldtype: "Currency",
 	},
 	{
 		fieldname: "status",
-		label: "Status",
+		label: "状态",
 		fieldtype: "Select",
 	},
 	{
 		fieldname: "approval_status",
-		label: "Approval Status",
+		label: "审批状态",
 		fieldtype: "Select",
 	},
 ]
@@ -116,37 +116,37 @@ export const EXPENSE_CLAIM_FIELDS = [
 export const ATTENDANCE_REQUEST_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "attendance_dates",
-		label: "Attendance Dates",
+		label: "考勤日期",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "total_attendance_days",
-		label: "Total Attendance Days",
+		label: "考勤天数",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "include_holidays",
-		label: "Include Holidays",
+		label: "包含节假日",
 		fieldtype: "Check",
 	},
 	{
 		fieldname: "shift",
-		label: "Shift",
+		label: "班次",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "reason",
-		label: "Reason",
+		label: "原因",
 		fieldtype: "Select",
 	},
 	{
 		fieldname: "employee",
-		label: "Employee",
+		label: "员工",
 		fieldtype: "Link",
 	},
 ]
@@ -154,32 +154,32 @@ export const ATTENDANCE_REQUEST_FIELDS = [
 export const SHIFT_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "shift_type",
-		label: "Shift Type",
+		label: "班次类型",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "shift_timing",
-		label: "Shift Timing",
+		label: "班次时间",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "shift_dates",
-		label: "Shift Dates",
+		label: "排班日期",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "total_shift_days",
-		label: "Total Shift Days",
+		label: "排班天数",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "employee",
-		label: "Employee",
+		label: "员工",
 		fieldtype: "Link",
 	},
 ]
@@ -187,32 +187,32 @@ export const SHIFT_FIELDS = [
 export const SHIFT_REQUEST_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "shift_type",
-		label: "Shift Type",
+		label: "班次类型",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "shift_dates",
-		label: "Shift Dates",
+		label: "排班日期",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "total_shift_days",
-		label: "Total Shift Days",
+		label: "排班天数",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "employee",
-		label: "Employee",
+		label: "员工",
 		fieldtype: "Link",
 	},
 	{
 		fieldname: "status",
-		label: "Status",
+		label: "状态",
 		fieldtype: "Select",
 	},
 ]
@@ -220,37 +220,37 @@ export const SHIFT_REQUEST_FIELDS = [
 export const EMPLOYEE_CHECKIN_FIELDS = [
 	{
 		fieldname: "name",
-		label: "ID",
+		label: "编号",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "log_type",
-		label: "Log Type",
+		label: "打卡类型",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "date",
-		label: "Date",
+		label: "日期",
 		fieldtype: "Date",
 	},
 	{
 		fieldname: "formatted_time",
-		label: "Time",
+		label: "时间",
 		fieldtype: "Time",
 	},
 	{
 		fieldname: "formatted_latitude",
-		label: "Latitude",
+		label: "纬度",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "formatted_longitude",
-		label: "Longitude",
+		label: "经度",
 		fieldtype: "Data",
 	},
 	{
 		fieldname: "geolocation",
-		label: "Geolocation",
+		label: "地理位置",
 		fieldtype: "geolocation",
 	},
 ]

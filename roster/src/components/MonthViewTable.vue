@@ -11,7 +11,7 @@
 						<Autocomplete
 							:options="employeeSearchOptions"
 							v-model="employeeSearch"
-							placeholder="Search Employee"
+							placeholder="搜索员工"
 							:multiple="true"
 						/>
 					</th>
@@ -429,7 +429,7 @@ const swapShift = createResource({
 		};
 	},
 	onSuccess: () => {
-		raiseToast("success", `Shift ${dropCell.value.shift ? "swapped" : "moved"} successfully!`);
+		raiseToast("success", `排班${dropCell.value.shift ? "交换" : "移动"}成功！`);
 		events.fetch();
 	},
 	onError(error: { messages: string[] }) {

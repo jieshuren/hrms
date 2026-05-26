@@ -14,7 +14,7 @@
 							>
 								<FeatherIcon name="chevron-left" class="h-5 w-5" />
 							</Button>
-							<h2 class="text-xl font-semibold text-gray-900">{{ __("Notifications") }} </h2>
+							<h2 class="text-xl font-semibold text-gray-900">{{ "通知" }} </h2>
 						</div>
 					</header>
 
@@ -24,7 +24,7 @@
 								class="text-lg text-gray-800 font-semibold"
 								v-if="unreadNotificationsCount.data"
 							>
-								{{ __("{0} Unread", [unreadNotificationsCount.data]) }}
+								{{ unreadNotificationsCount.data + " 条未读" }}
 							</div>
 							<div class="flex ml-auto gap-1">
 								<Button
@@ -35,7 +35,7 @@
 									<template #prefix>
 										<FeatherIcon name="settings" class="w-4" />
 									</template>
-									{{ __("Settings") }}
+									{{ "设置" }}
 								</Button>
 								<Button
 									v-if="unreadNotificationsCount.data"
@@ -46,7 +46,7 @@
 									<template #prefix>
 										<FeatherIcon name="check-circle" class="w-4" />
 									</template>
-									{{ __("Mark all as read") }}
+									{{ "全部标为已读" }}
 								</Button>
 							</div>
 						</div>
@@ -85,10 +85,10 @@
 								class="ml-auto"
 								@click="loadMore"
 							>
-								{{ __('Load more') }}
+								{{ '加载更多' }}
 							</Button>
 						</div>
-						<EmptyState v-else-if="!notifications.data" :message="__('You have no notifications')" />
+						<EmptyState v-else-if="!notifications.data" :message="'您没有通知'" />
 					</div>
 				</div>
 			</div>

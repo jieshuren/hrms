@@ -4,9 +4,9 @@
 			:buttons="TAB_BUTTONS"
 			v-model="activeTab"
 		/>
-		<RequestList v-if="activeTab == 'My Requests'" :items="myRequests" />
+		<RequestList v-if="activeTab == '我的申请'" :items="myRequests" />
 		<RequestList
-			v-else-if="activeTab == 'Team Requests'"
+			v-else-if="activeTab == '团队申请'"
 			:items="teamRequests"
 			:teamRequests="true"
 		/>
@@ -30,10 +30,10 @@ import ShiftRequestItem from "@/components/ShiftRequestItem.vue"
 
 import { useListUpdate } from "@/composables/realtime"
 
-const activeTab = ref("My Requests")
+const activeTab = ref("我的申请")
 const socket = inject("$socket")
 
-const TAB_BUTTONS = ["My Requests", "Team Requests"] // __("My Requests"), __("Team Requests")
+const TAB_BUTTONS = ["我的申请", "团队申请"] // __("My Requests"), __("Team Requests")
 
 const myRequests = computed(() =>
 	updateRequestDetails(myLeaves, myClaims, myShiftRequests, myAttendanceRequests)
