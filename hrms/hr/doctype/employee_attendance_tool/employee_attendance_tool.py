@@ -171,8 +171,9 @@ def get_monthly_attendance_by_project(
 		filters={
 			"project": project,
 			"attendance_date": ["between", [_getdate(start), _getdate(end)]],
+			"docstatus": ["!=", 2],
 		},
-		order_by="attendance_date asc",
+		order_by="attendance_date asc, creation asc",
 		limit_page_length=0,
 	)
 
